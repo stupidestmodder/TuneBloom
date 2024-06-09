@@ -242,7 +242,7 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
                 namePrefix = "";
         }
 
-        sead::SafeString name = item->getFormattedName();
+        sead::FixedSafeString<256> name = item->getFormattedName();
 
         bool selected = sSelectedItem == item;
         if (ImGui::Selectable(sead::FormatFixedSafeString<256>("%s%s", namePrefix, name.cstr()).cstr(), selected))
