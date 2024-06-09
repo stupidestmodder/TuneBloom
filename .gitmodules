@@ -1,0 +1,3 @@
+[submodule "TuneBloom/vendor/sead"]
+	path = TuneBloom/vendor/sead
+	url = https://github.com/stupidestmodder/sead.git
