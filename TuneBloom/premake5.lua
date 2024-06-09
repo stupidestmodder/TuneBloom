@@ -40,13 +40,13 @@ project "TuneBloom"
         links "winmm.lib"
 
     filter "configurations:Debug"
-        defines { "SEAD_DEBUG", "DEBUG" }
+        defines { "SEAD_DEBUG" }
         runtime "Debug"
         symbols "on"
         optimize "off"
 
     filter "configurations:Release"
-        defines { "SEAD_DEBUG", "NDEBUG" }
+        defines { "SEAD_DEBUG" }
         runtime "Release"
         symbols "on"
         optimize "speed"
