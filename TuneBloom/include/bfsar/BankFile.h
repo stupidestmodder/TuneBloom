@@ -1,12 +1,12 @@
 #pragma once
 
+#include <bfsar/Item.h>
+#include <bfsar/InnerFile.h>
 #include <bfsar/WaveFile.h>
 
 #include <snd/snd_BankFileReader.h>
 
-#include <unordered_map>
-
-class BankFile : public Item
+class BankFile : public Item, public InnerFile
 {
 public:
     class VelocityRegion : public Item
@@ -185,7 +185,7 @@ public:
         }
 
     private:
-        u32 mProgramNo;
+        u8 mProgramNo;
         KeyRegion::List mKeyRegionList;
 
         friend class BankFile;
@@ -194,14 +194,20 @@ public:
 public:
     BankFile()
         : Item()
+        , InnerFile(cInvalidId)
         , mInstrumentList()
     {
         mItemType = ItemType::BankFile;
     }
 
-    void read(const void* bankFile);
-    void drawUI();
+    void drawUI() override;
+    void drawFileUI();
 
+private:
+    void doRead(const void* fileAddr) override;
+    u32 doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool isLast) const override;
+
+public:
     const Instrument* getInstrument(u8 programNo) const
     {
         for (const Item* item : mInstrumentList)

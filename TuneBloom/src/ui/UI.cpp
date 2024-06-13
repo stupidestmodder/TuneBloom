@@ -478,10 +478,17 @@ void DrawPropertiesUI()
                 break;
             }
 
+            case Item::ItemType::SequenceFile:
+            {
+                SequenceFile* sequenceFile = static_cast<SequenceFile*>(sSelectedItem);
+                sequenceFile->drawUI();
+                break;
+            }
+
             case Item::ItemType::BankFile:
             {
-                BankFile* bank = static_cast<BankFile*>(sSelectedItem);
-                //bank->drawUI();
+                BankFile* bankFile = static_cast<BankFile*>(sSelectedItem);
+                bankFile->drawUI();
                 break;
             }
 
@@ -538,7 +545,7 @@ void DrawFileUI(ImGuiID dockspaceId)
                 case Item::ItemType::BankFile:
                 {
                     BankFile* bank = static_cast<BankFile*>(file);
-                    bank->drawUI();
+                    bank->drawFileUI();
                     break;
                 }
             }

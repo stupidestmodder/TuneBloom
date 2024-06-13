@@ -255,9 +255,31 @@ void BankFile::Instrument::drawUI()
 	ImGui::Text("ProgramNo: %u", mProgramNo);
 }
 
-void BankFile::read(const void* bankFile)
+void BankFile::drawUI()
 {
-	nw::snd::internal::BankFileReader reader(bankFile);
+	InnerFile::drawUI();
+}
+
+void BankFile::drawFileUI()
+{
+	if (ImGui::BeginChild("Instruments", ImVec2(0.0f, ImGui::GetWindowHeight() / 2.0f), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
+	{
+    	DrawAllItemsUI("Instrument", mInstrumentList);
+	}
+	ImGui::EndChild();
+
+	if (ImGui::BeginChild("Keyboard", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Border))
+	{
+		static int PrevNoteActive = -1;
+		//ImGui_PianoKeyboard("PianoTest", ImVec2(1024, 70), &PrevNoteActive, 0, 127, TestPianoBoardFunct, nullptr, nullptr);
+		ImGui_PianoKeyboard("PianoTest", ImVec2(ImGui::GetWindowContentRegionMax().x, 70), &PrevNoteActive, 0, 127, TestPianoBoardFunct, sSelectedItem, nullptr);
+	}
+	ImGui::EndChild();
+}
+
+void BankFile::doRead(const void* fileAddr)
+{
+	nw::snd::internal::BankFileReader reader(fileAddr);
 	SEAD_ASSERT(reader.IsInitialized());
 
 	for (s32 programNo = 0; programNo < reader.GetInstrumentCount(); programNo++)
@@ -281,32 +303,10 @@ void BankFile::read(const void* bankFile)
 	}
 }
 
-void BankFile::drawUI()
+u32 BankFile::doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool isLast) const
 {
-	// ImGuiID dockspaceId = ImGui::GetID("DockSpace");
-
-    // if (ImGui::DockBuilderGetNode(dockspaceId) == nullptr)
-    // {
-    //     DockBuilder(dockspaceId, ImGui::GetWindowSize());
-    // }
-
-	// ImGui::DockSpace(dockspaceId);
-
-	//ImGui::SplitterBehavior()
-
-	if (ImGui::BeginChild("Instruments", ImVec2(0.0f, ImGui::GetWindowHeight() / 2.0f), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeY))
-	{
-    	DrawAllItemsUI("Instrument", mInstrumentList);
-	}
-	ImGui::EndChild();
-
-	if (ImGui::BeginChild("Keyboard", ImVec2(0.0f, 0.0f), ImGuiChildFlags_Border))
-	{
-		static int PrevNoteActive = -1;
-		//ImGui_PianoKeyboard("PianoTest", ImVec2(1024, 70), &PrevNoteActive, 0, 127, TestPianoBoardFunct, nullptr, nullptr);
-		ImGui_PianoKeyboard("PianoTest", ImVec2(ImGui::GetWindowContentRegionMax().x, 70), &PrevNoteActive, 0, 127, TestPianoBoardFunct, sSelectedItem, nullptr);
-	}
-	ImGui::EndChild();
+	SEAD_ASSERT(false);
+	return 0;
 }
 
 //
