@@ -521,21 +521,6 @@ void Bfsar::open_(sead::Heap* heap)
         mWaveArchiveList.pushBack(warc);
     }
 
-    u32 bankCount = 0;
-    for (u32 i = 0; i < mSoundArchive->detail_GetFileCount(); i++)
-    {
-        u32 bankFileSize = 0;
-        const void* bankFile = mSoundArchive->detail_GetFileAddress(i, &bankFileSize);
-
-        if (!bankFile || sead::MemUtil::compare(bankFile, "FBNK", 4) != 0)
-        {
-            continue;
-        }
-
-        bankCount++;
-    }
-    SEAD_PRINT("Bank count: %u\n", bankCount);
-
     std::unordered_map<std::string, TempFile> bankFileCache;
     std::unordered_map<u32, u32> bankFileIdxMap;
 
