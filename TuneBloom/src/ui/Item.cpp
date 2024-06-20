@@ -207,6 +207,11 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
                     sScrollItem = sSelectedItem;
                 }
             }
+
+            if (canEdit && ImGui::IsKeyPressed(ImGuiKey_Delete))
+            {
+                sDeleteItem = sSelectedItem;
+            }
         }
     }
 
