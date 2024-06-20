@@ -35,13 +35,15 @@ public:
         sead::FixedSafeString<256> getFormattedName() const override
         {
             sead::FixedSafeString<256> name;
+            name.appendWithFormat("[%u] ", getId());
+
             if (mItemRef.isAttached())
             {
-                name = mItemRef.getItem()->getFormattedName();
+                name.append(mItemRef.getItem()->getNameOrNull());
             }
             else
             {
-                name = "(null)";
+                name.append("(null)");
             }
 
             return name;
