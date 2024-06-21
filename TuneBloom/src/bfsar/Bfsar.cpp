@@ -2318,6 +2318,8 @@ void Bfsar::save_(sead::FileHandle& handle)
                                 SEAD_ASSERT(it != wsdIndexes.end());
 
                                 stream.writeU32(it->second);
+
+                                SEAD_ASSERT(waveInfo.getAllocateTrackCount() == 1);
                                 stream.writeU32(waveInfo.getAllocateTrackCount());
 
                                 std::unordered_map<u32, u32> flags;

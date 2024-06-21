@@ -593,11 +593,11 @@ void DrawSoundPropertiesUI()
             }
 
             {
-                u32 allocateTrackCount = waveSoundInfo.getAllocateTrackCount();
-                if (ImGui::InputScalar("Allocate Track Count", ImGuiDataType_U32, &allocateTrackCount, &cStepU32))
-                {
-                    waveSoundInfo.setAllocateTrackCount(allocateTrackCount);
-                }
+                // u32 allocateTrackCount = waveSoundInfo.getAllocateTrackCount();
+                // if (ImGui::InputScalar("Allocate Track Count", ImGuiDataType_U32, &allocateTrackCount, &cStepU32))
+                // {
+                //     waveSoundInfo.setAllocateTrackCount(allocateTrackCount);
+                // }
             }
 
             {
