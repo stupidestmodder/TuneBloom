@@ -1822,7 +1822,7 @@ void Bfsar::save_(sead::FileHandle& handle)
         {
         public:
             NullFile(const char* magic)
-                : InnerFile(0xFFFFFFFF)
+                : InnerFile()
                 , mMagic(magic)
             {
             }
@@ -2282,18 +2282,6 @@ void Bfsar::save_(sead::FileHandle& handle)
         writer.openReference("PlayerInfoSection");
         writer.openReference("FileInfoSection");
         writer.openReference("SoundArchivePlayerInfo");
-
-        auto writeIdTable = [&](const IdTable& table, nw::snd::internal::ItemType type)
-        {
-            stream.writeU32(table.size());
-
-            for (const IdEntry* entry : table)
-            {
-                SEAD_ASSERT(entry);
-
-                stream.writeU32(nw::snd::internal::Util::GetMaskedItemId(entry->getId(), type));
-            }
-        };
 
         writer.closeReference("SoundInfoSection", nw::snd::internal::ElementType_SoundArchiveFile_SoundInfoSection);
         writer.pushOffsetBase();

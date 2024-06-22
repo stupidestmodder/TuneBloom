@@ -501,15 +501,8 @@ void DrawPropertiesUI()
 
             case Item::ItemType::GroupItemInfo:
             {
-                BfgrpFile::ItemInfo* itemInfo = static_cast<BfgrpFile::ItemInfo*>(sSelectedItem);
+                Group::ItemInfo* itemInfo = static_cast<Group::ItemInfo*>(sSelectedItem);
                 //itemInfo->drawUI();
-                break;
-            }
-
-            case Item::ItemType::GroupItemInfoEx:
-            {
-                BfgrpFile::ItemInfoEx* itemInfoEx = static_cast<BfgrpFile::ItemInfoEx*>(sSelectedItem);
-                //itemInfoEx->drawUI();
                 break;
             }
         }

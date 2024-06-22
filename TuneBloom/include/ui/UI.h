@@ -5,6 +5,7 @@
 #include <icons/IconsLucide.h>
 
 #include <bfsar/Bfsar.h>
+#include <bfsar/IdTable.h>
 
 struct FileFilter
 {

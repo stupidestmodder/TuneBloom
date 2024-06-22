@@ -214,7 +214,7 @@ public:
 public:
     BankFile()
         : Item()
-        , InnerFile(cInvalidId)
+        , InnerFile()
         , mInstrumentList()
     {
         mItemType = ItemType::BankFile;

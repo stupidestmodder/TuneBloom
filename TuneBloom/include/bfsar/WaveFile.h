@@ -70,7 +70,7 @@ public:
 public:
     WaveFile()
         : Item()
-        , InnerFile(cInvalidId)
+        , InnerFile()
         , mDataEndian(sead::Endian::eBig)
         , mEncoding(Encoding::DspAdpcm)
         , mIsLoop(false)

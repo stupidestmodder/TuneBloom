@@ -8,7 +8,7 @@ class SequenceFile : public Item, public InnerFile
 public:
     SequenceFile()
         : Item()
-        , InnerFile(cInvalidId)
+        , InnerFile()
         , mData(nullptr)
         , mDataSize(0)
     {

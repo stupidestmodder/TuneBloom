@@ -1,7 +1,6 @@
 #pragma once
 
 #include <bfsar/Item.h>
-#include <bfsar/IdTable.h>
 
 class Bank : public Item
 {

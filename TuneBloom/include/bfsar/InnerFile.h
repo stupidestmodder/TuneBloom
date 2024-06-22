@@ -12,16 +12,13 @@ class InnerFile
     SEAD_RTTI_BASE(InnerFile);
 
 public:
-    InnerFile(u32 fileId)
-        : mFileId(fileId)
-
-        , mEndian(sead::Endian::eBig)
+    InnerFile()
+        : mEndian(sead::Endian::eBig)
         , mVersion(0x00010000)
 
         , mWritePos(0xFFFFFFFF)
         , mWriteSize(0xFFFFFFFF)
     {
-        //SEAD_ASSERT(mFileId != 0xFFFFFFFF);
     }
 
     virtual ~InnerFile()
@@ -92,8 +89,6 @@ protected:
     virtual u32 doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool isLast) const = 0;
 
 protected:
-    u32 mFileId;
-
     sead::Endian::Types mEndian;
     u32 mVersion;
 
