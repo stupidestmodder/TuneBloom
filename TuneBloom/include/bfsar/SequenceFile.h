@@ -10,6 +10,7 @@ public:
         : Item()
         , InnerFile(cInvalidId)
         , mData(nullptr)
+        , mDataSize(0)
     {
         mItemType = ItemType::SequenceFile;
     }
@@ -35,8 +36,11 @@ private:
 
     u32 doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool isLast) const override
     {
-        SEAD_ASSERT(false);
-        return 0;
+        //SEAD_ASSERT(false);
+        //return 0;
+
+        stream->writeMemBlock(mData, mDataSize);
+        return mDataSize;
     }
 
 public:
@@ -44,6 +48,7 @@ public:
     {
         SEAD_ASSERT(!mData);
 
+        mDataSize = fileSize;
         mData = new u8[fileSize];
         sead::MemUtil::copy(mData, fileAddr, fileSize);
 
@@ -57,4 +62,5 @@ public:
 
 private:
     u8* mData;
+    u32 mDataSize;
 };

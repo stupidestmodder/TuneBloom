@@ -975,7 +975,7 @@ void Bfsar::open_(sead::Heap* heap)
     }
 }
 
-template <typename T>
+template <typename T, typename THasher = std::hash<T>, typename TKeyEq = std::equal_to<T>>
 class VectorSet
 {
 public:
@@ -994,7 +994,7 @@ public:
 
 private:
     std::vector<T> theVector;
-    std::unordered_set<T> theSet;
+    std::unordered_set<T, THasher, TKeyEq> theSet;
 };
 
 // template <typename Key, typename T>
@@ -1020,6 +1020,34 @@ private:
 //     std::vector<T> theVector;
 //     std::unordered_map<Key, T> theMap;
 // };
+
+template <typename T>
+inline void hash_combine(std::size_t& seed, const T& v)
+{
+    std::hash<T> hasher;
+    seed ^= hasher(v) + 0x9E3779B9 + (seed << 6) + (seed >> 2);
+}
+
+struct pair_hash
+{
+    template <class T1, class T2>
+    std::size_t operator()(const std::pair<T1, T2>& v) const
+    {
+        std::size_t seed = 0;
+        hash_combine(seed, v.first);
+        hash_combine(seed, v.second);
+        return seed;
+    }
+};
+
+struct pair_equal
+{
+    template <class T1, class T2>
+    bool operator()(const std::pair<T1, T2>& lhs, const std::pair<T1, T2>& rhs) const
+    {
+        return lhs.first == rhs.first && lhs.second == rhs.second;
+    }
+};
 
 void Bfsar::save_(sead::FileHandle& handle)
 {
@@ -1105,8 +1133,8 @@ void Bfsar::save_(sead::FileHandle& handle)
         }
     };
 
-    std::unordered_map<const SoundSet*, VectorSet<const WaveArchive*>> waveSoundSetsWarcs;
-    std::unordered_map<const Bank*, VectorSet<const WaveArchive*>> banksWarcs;
+    std::unordered_map<const SoundSet*, VectorSet<std::pair<const Group*, const WaveArchive*>, pair_hash, pair_equal>> waveSoundSetsWarcs;
+    std::unordered_map<const Bank*, VectorSet<std::pair<const Group*, const WaveArchive*>, pair_hash, pair_equal>> banksWarcs;
 
     std::unordered_map<const Sound*, u32> wsdIndexes;
 
@@ -1127,7 +1155,7 @@ void Bfsar::save_(sead::FileHandle& handle)
                 const WaveArchive* warc = static_cast<const WaveArchive*>(soundSet->getWaveArchiveRef().getItem());
                 SEAD_ASSERT(warc);
 
-                waveSoundSetsWarcs[soundSet].insert(warc);
+                waveSoundSetsWarcs[soundSet].insert(std::make_pair(nullptr, warc));
             }
 
             u32 i = 0;
@@ -1161,7 +1189,7 @@ void Bfsar::save_(sead::FileHandle& handle)
             const WaveArchive* warc = static_cast<const WaveArchive*>(bank->getWaveArchiveRef().getItem());
             SEAD_ASSERT(warc);
 
-            banksWarcs[bank].insert(warc);
+            banksWarcs[bank].insert(std::make_pair(nullptr, warc));
         }
     }
 
@@ -1511,7 +1539,7 @@ void Bfsar::save_(sead::FileHandle& handle)
 
                 mWaveArchiveList.pushBack(warc);
 
-                waveSoundSetsWarcs[soundSet].insert(warc);
+                waveSoundSetsWarcs[soundSet].insert(std::make_pair(nullptr, warc));
 
                 delegateWaveFiles(soundSet, warc);
 
@@ -1528,7 +1556,7 @@ void Bfsar::save_(sead::FileHandle& handle)
                     {
                         const WaveArchive* warc = groupTargetWarcs[group];
 
-                        waveSoundSetsWarcs[soundSet].insert(warc);
+                        waveSoundSetsWarcs[soundSet].insert(std::make_pair(group, warc));
 
                         delegateWaveFiles(soundSet, warc);
                     }
@@ -1580,7 +1608,7 @@ void Bfsar::save_(sead::FileHandle& handle)
 
                 mWaveArchiveList.pushBack(warc);
 
-                banksWarcs[bank].insert(warc);
+                banksWarcs[bank].insert(std::make_pair(nullptr, warc));
 
                 delegateWaveFiles(bank, warc);
 
@@ -1597,7 +1625,7 @@ void Bfsar::save_(sead::FileHandle& handle)
                     {
                         const WaveArchive* warc = groupTargetWarcs[group];
 
-                        banksWarcs[bank].insert(warc);
+                        banksWarcs[bank].insert(std::make_pair(group, warc));
 
                         delegateWaveFiles(bank, warc);
                     }
@@ -1622,14 +1650,16 @@ void Bfsar::save_(sead::FileHandle& handle)
         File()
             : id(nw::snd::SoundArchive::INVALID_ID)
             , innerFile(nullptr)
+            , includeInBfsar(false)
             , external(false)
             , externalPath()
         {
         }
 
-        File(u32 id_, const InnerFile* innerFile_)
+        File(u32 id_, const InnerFile* innerFile_, bool includeInBfsar_)
             : id(id_)
             , innerFile(innerFile_)
+            , includeInBfsar(includeInBfsar_)
             , external(false)
             , externalPath()
         {
@@ -1638,6 +1668,7 @@ void Bfsar::save_(sead::FileHandle& handle)
         File(u32 id_, const std::string& externalPath_)
             : id(id_)
             , innerFile(nullptr)
+            , includeInBfsar(false)
             , external(true)
             , externalPath(externalPath_)
         {
@@ -1645,6 +1676,7 @@ void Bfsar::save_(sead::FileHandle& handle)
 
         u32 id;
         const InnerFile* innerFile;
+        bool includeInBfsar;
         bool external;
         std::string externalPath;
     };
@@ -1652,6 +1684,8 @@ void Bfsar::save_(sead::FileHandle& handle)
     std::unordered_map<const Item*, File> itemFileIds;
     std::vector<File> files;
     std::unordered_map<u32, VectorSet<const Item*>> filesItems;
+
+    std::vector<InnerFile*> generatedInnerFiles;
 
     //? Setup Files
     {
@@ -1701,6 +1735,44 @@ void Bfsar::save_(sead::FileHandle& handle)
             }
         }
 
+        auto itemInEmbedGroup = [&](const Item* item)
+        {
+            const VectorSet<const Group*>& attachGroups = itemAttachedGroups[item];
+            if (attachGroups.size() == 0)
+            {
+                return false;
+            }
+
+            for (const Group* group : attachGroups)
+            {
+                if (group->getOutputType() == Group::OutputType::Embed)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        auto itemInLinkGroup = [&](const Item* item)
+        {
+            const VectorSet<const Group*>& attachGroups = itemAttachedGroups[item];
+            if (attachGroups.size() == 0)
+            {
+                return false;
+            }
+
+            for (const Group* group : attachGroups)
+            {
+                if (group->getOutputType() == Group::OutputType::Link)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
         std::unordered_map<const SequenceFile*, File> bfseqFiles;
 
         //? BFSEQ
@@ -1723,7 +1795,7 @@ void Bfsar::save_(sead::FileHandle& handle)
                     const auto& it = bfseqFiles.find(seqFile);
                     if (it == bfseqFiles.end())
                     {
-                        File file(files.size(), seqFile);
+                        File file(files.size(), seqFile, !itemInEmbedGroup(sound));
 
                         bfseqFiles.try_emplace(seqFile, file);
                         itemFileIds.try_emplace(sound, file);
@@ -1749,8 +1821,9 @@ void Bfsar::save_(sead::FileHandle& handle)
         class NullFile : public InnerFile
         {
         public:
-            NullFile()
+            NullFile(const char* magic)
                 : InnerFile(0xFFFFFFFF)
+                , mMagic(magic)
             {
             }
 
@@ -1761,11 +1834,50 @@ void Bfsar::save_(sead::FileHandle& handle)
 
             u32 doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool isLast) const override
             {
-                return 0;
+                stream->writeString(mMagic, mMagic.calcLength());
+                return mMagic.calcLength();
+            }
+
+            sead::SafeString mMagic;
+        };
+
+        class BFWSDFile : public NullFile
+        {
+        public:
+            BFWSDFile()
+                : NullFile("FWSD")
+            {
             }
         };
 
-        static const NullFile cNullFile;
+        class BFBNKFile : public NullFile
+        {
+        public:
+            BFBNKFile()
+                : NullFile("FBNK")
+            {
+            }
+        };
+
+        class BFWARFile : public NullFile
+        {
+        public:
+            BFWARFile()
+                : NullFile("FWAR")
+            {
+            }
+        };
+
+        class BFGRPFile : public NullFile
+        {
+        public:
+            BFGRPFile()
+                : NullFile("FGRP")
+            {
+            }
+        };
+
+        std::unordered_map<const WaveArchive*, bool> includeGeneratedWarcInBfsar;
 
         //? BFWSD
         for (const Item* item : mSoundSetList)
@@ -1778,7 +1890,82 @@ void Bfsar::save_(sead::FileHandle& handle)
                 continue;
             }
 
-            File file(files.size(), &cNullFile); // TODO: BFWSD file
+            const VectorSet<const Group*>& attachGroups = itemAttachedGroups[soundSet];
+            bool includeInBfsar = attachGroups.size() == 0;
+            if (!includeInBfsar)
+            {
+                switch (soundSet->getWaveArchiveType())
+                {
+                    case WaveArchiveType::AutomaticShared:
+                        includeInBfsar = itemInLinkGroup(soundSet);
+
+                        if (includeInBfsar)
+                        {
+                            SEAD_ASSERT(waveSoundSetsWarcs[soundSet].size() > 1);
+                            const auto& pair = waveSoundSetsWarcs[soundSet].front();
+
+                            SEAD_ASSERT(pair.first == nullptr);
+                            const WaveArchive* warc = pair.second;
+                            SEAD_ASSERT(itemAttachedGroups[warc].size() == 0);
+
+                            includeGeneratedWarcInBfsar[warc] = true;
+                        }
+
+                        break;
+
+                    case WaveArchiveType::AutomaticIndividual:
+                    {
+                        includeInBfsar = !itemInEmbedGroup(soundSet);
+
+                        SEAD_ASSERT(waveSoundSetsWarcs[soundSet].size() == 1);
+                        const auto& pair = waveSoundSetsWarcs[soundSet].front();
+
+                        SEAD_ASSERT(pair.first == nullptr);
+                        const WaveArchive* warc = pair.second;
+                        SEAD_ASSERT(itemAttachedGroups[warc].size() == 0);
+
+                        includeGeneratedWarcInBfsar[warc] = includeInBfsar;
+                        break;
+                    }
+
+                    case WaveArchiveType::Explicit:
+                        includeInBfsar = !itemInEmbedGroup(soundSet);
+                        break;
+
+                    default:
+                        SEAD_ASSERT_MSG(false, "Invalid WaveArchiveType");
+                }
+            }
+            else
+            {
+                switch (soundSet->getWaveArchiveType())
+                {
+                    case WaveArchiveType::AutomaticShared:
+                    case WaveArchiveType::AutomaticIndividual:
+                    {
+                        SEAD_ASSERT(waveSoundSetsWarcs[soundSet].size() == 1);
+                        const auto& pair = waveSoundSetsWarcs[soundSet].front();
+
+                        SEAD_ASSERT(pair.first == nullptr);
+                        const WaveArchive* warc = pair.second;
+                        SEAD_ASSERT(itemAttachedGroups[warc].size() == 0);
+
+                        includeGeneratedWarcInBfsar[warc] = true;
+                        break;
+                    }
+
+                    case WaveArchiveType::Explicit:
+                        break;
+
+                    default:
+                        SEAD_ASSERT_MSG(false, "Invalid WaveArchiveType");
+                }
+            }
+
+            InnerFile* innerFile = new BFWSDFile();
+            generatedInnerFiles.push_back(innerFile);
+
+            File file(files.size(), innerFile, includeInBfsar); // TODO: BFWSD file
 
             itemFileIds.try_emplace(soundSet, file);
             files.push_back(file);
@@ -1813,7 +2000,82 @@ void Bfsar::save_(sead::FileHandle& handle)
 
             const BankFile* bankFile = static_cast<const BankFile*>(bankFileItem);
 
-            File file(files.size(), bankFile);
+            const VectorSet<const Group*>& attachGroups = itemAttachedGroups[bank];
+            bool includeInBfsar = attachGroups.size() == 0;
+            if (!includeInBfsar)
+            {
+                switch (bank->getWaveArchiveType())
+                {
+                    case WaveArchiveType::AutomaticShared:
+                        includeInBfsar = itemInLinkGroup(bank);
+
+                        if (includeInBfsar)
+                        {
+                            SEAD_ASSERT(banksWarcs[bank].size() > 1);
+                            const auto& pair = banksWarcs[bank].front();
+
+                            SEAD_ASSERT(pair.first == nullptr);
+                            const WaveArchive* warc = pair.second;
+                            SEAD_ASSERT(itemAttachedGroups[warc].size() == 0);
+
+                            includeGeneratedWarcInBfsar[warc] = true;
+                        }
+
+                        break;
+
+                    case WaveArchiveType::AutomaticIndividual:
+                    {
+                        includeInBfsar = !itemInEmbedGroup(bank);
+
+                        SEAD_ASSERT(banksWarcs[bank].size() == 1);
+                        const auto& pair = banksWarcs[bank].front();
+
+                        SEAD_ASSERT(pair.first == nullptr);
+                        const WaveArchive* warc = pair.second;
+                        SEAD_ASSERT(itemAttachedGroups[warc].size() == 0);
+
+                        includeGeneratedWarcInBfsar[warc] = includeInBfsar;
+                        break;
+                    }
+
+                    case WaveArchiveType::Explicit:
+                        includeInBfsar = !itemInEmbedGroup(bank);
+                        break;
+
+                    default:
+                        SEAD_ASSERT_MSG(false, "Invalid WaveArchiveType");
+                }
+            }
+            else
+            {
+                switch (bank->getWaveArchiveType())
+                {
+                    case WaveArchiveType::AutomaticShared:
+                    case WaveArchiveType::AutomaticIndividual:
+                    {
+                        SEAD_ASSERT(banksWarcs[bank].size() == 1);
+                        const auto& pair = banksWarcs[bank].front();
+
+                        SEAD_ASSERT(pair.first == nullptr);
+                        const WaveArchive* warc = pair.second;
+                        SEAD_ASSERT(itemAttachedGroups[warc].size() == 0);
+
+                        includeGeneratedWarcInBfsar[warc] = true;
+                        break;
+                    }
+
+                    case WaveArchiveType::Explicit:
+                        break;
+
+                    default:
+                        SEAD_ASSERT_MSG(false, "Invalid WaveArchiveType");
+                }
+            }
+
+            InnerFile* innerFile = new BFBNKFile();
+            generatedInnerFiles.push_back(innerFile);
+
+            File file(files.size(), innerFile, includeInBfsar); // TODO: BFBNK file
 
             itemFileIds.try_emplace(bank, file);
             files.push_back(file);
@@ -1832,7 +2094,10 @@ void Bfsar::save_(sead::FileHandle& handle)
                 continue;
             }
 
-            File file(files.size(), &cNullFile); // TODO: BFWAR file
+            InnerFile* innerFile = new BFWARFile();
+            generatedInnerFiles.push_back(innerFile);
+
+            File file(files.size(), innerFile, !itemInEmbedGroup(warc)); // TODO: BFWAR file
 
             itemFileIds.try_emplace(warc, file);
             files.push_back(file);
@@ -1846,7 +2111,10 @@ void Bfsar::save_(sead::FileHandle& handle)
             SEAD_ASSERT(item->getItemType() == Item::ItemType::Group);
             const Group* group = static_cast<const Group*>(item);
 
-            File file(files.size(), &cNullFile); // TODO: BFGRP file
+            InnerFile* innerFile = new BFGRPFile();
+            generatedInnerFiles.push_back(innerFile);
+
+            File file(files.size(), innerFile, true); // TODO: BFGRP file
 
             itemFileIds.try_emplace(group, file);
             files.push_back(file);
@@ -1857,7 +2125,17 @@ void Bfsar::save_(sead::FileHandle& handle)
         //? Other BFWAR
         for (const WaveArchive* warc : generatedWarcs)
         {
-            File file(files.size(), &cNullFile); // TODO: BFWAR file
+            const VectorSet<const Group*>& attachGroups = itemAttachedGroups[warc];
+            bool includeInBfsar = false;
+            if (attachGroups.size() == 0)
+            {
+                includeInBfsar = includeGeneratedWarcInBfsar[warc];
+            }
+
+            InnerFile* innerFile = new BFWARFile();
+            generatedInnerFiles.push_back(innerFile);
+
+            File file(files.size(), innerFile, includeInBfsar); // TODO: BFWAR file
 
             itemFileIds.try_emplace(warc, file);
             files.push_back(file);
@@ -2396,12 +2674,13 @@ void Bfsar::save_(sead::FileHandle& handle)
 
                             if (soundSet->getWaveArchiveType() != WaveArchiveType::AutomaticShared)
                             {
-                                const VectorSet<const WaveArchive*>& warcs = waveSoundSetsWarcs[soundSet];
+                                const auto& warcs = waveSoundSetsWarcs[soundSet];
 
                                 stream.writeU32(warcs.size()); // WaveArchiveIdTable count
 
-                                for (const WaveArchive* warc : warcs)
+                                for (const auto& pair : warcs)
                                 {
+                                    const WaveArchive* warc = pair.second;
                                     stream.writeU32(nw::snd::internal::Util::GetMaskedItemId(warc->getId(), nw::snd::internal::ItemType_WaveArchive)); // WaveArchiveIdTable entries
                                 }
                             }
@@ -2477,12 +2756,13 @@ void Bfsar::save_(sead::FileHandle& handle)
 
                     if (bank->getWaveArchiveType() != WaveArchiveType::AutomaticShared)
                     {
-                        const VectorSet<const WaveArchive*>& warcs = banksWarcs[bank];
+                        const auto& warcs = banksWarcs[bank];
 
                         stream.writeU32(warcs.size()); // WaveArchiveIdTable count
 
-                        for (const WaveArchive* warc : warcs)
+                        for (const auto& pair : warcs)
                         {
+                            const WaveArchive* warc = pair.second;
                             stream.writeU32(nw::snd::internal::Util::GetMaskedItemId(warc->getId(), nw::snd::internal::ItemType_WaveArchive)); // WaveArchiveIdTable entries
                         }
                     }
@@ -2707,94 +2987,72 @@ void Bfsar::save_(sead::FileHandle& handle)
 
         for (const File& file : files)
         {
-            if (file.external)
+            if (file.external || !file.includeInBfsar || !file.innerFile)
             {
                 continue;
             }
 
-            if (file.innerFile)
-            {
-                // writer.closeSizedReference(
-                //     sead::FormatFixedSafeString<32>("File%u", file.id),
-                //     false ? 0 : nw::snd::internal::ElementType_General_ByteStream,
-                //     0xFFFFFFFF,
-                //     0xFFFFFFFF
-                // );
+            writer.align(0x20);
 
-                writer.closeNullSizedReference(sead::FormatFixedSafeString<32>("File%u", file.id));
+            const InnerFile* innerFile = file.innerFile;
+
+            u32 startPos = writer.getPosition();
+            u32 size = 0;
+            {
+                SEAD_ASSERT(innerFile);
+                size = innerFile->write(&handle, &stream, mEndian, file.id == lastFileId);
             }
 
-            // for (u32 i = 0; i < file->getVariations().size(); i++)
-            // {
-            //     bool embeddedInGroup = file->isEmbeddedInGroup(i);
-            //     if (file->getLocationType() == File::LocationType::Group && !embeddedInGroup)
-            //     {
-            //         //! Bad cuz file will be lost...
-            //         SEAD_PRINT("BRUH BAD\n");
-            //     }
-
-            //     if (file->getLocationType() == File::LocationType::Internal && !embeddedInGroup)
-            //     {
-            //         writer.align(0x20);
-
-            //         const InnerFile* innerFile = file->getInnerFile(i);
-
-            //         u32 startPos = writer.getPosition();
-            //         u32 size = 0;
-            //         {
-            //             SEAD_ASSERT(innerFile);
-            //             size = innerFile->write(&handle, &stream, mEndian, file->getId() == lastFileId);
-            //         }
-
-            //         writer.closeSizedReference(
-            //             sead::FormatFixedSafeString<32>("File%u", file->getId()),
-            //             file->getFileType() == File::FileType::Bfgrp ? 0 : nw::snd::internal::ElementType_General_ByteStream,
-            //             startPos - fileBlockPos - sizeof(nw::ut::BinaryBlockHeader),
-            //             size
-            //         );
-            //     }
-            // }
+            writer.closeSizedReference(
+                sead::FormatFixedSafeString<32>("File%u", file.id),
+                false ? 0 : nw::snd::internal::ElementType_General_ByteStream,
+                startPos - fileBlockPos - sizeof(nw::ut::BinaryBlockHeader),
+                size
+            );
         }
 
         for (const File& file : files)
         {
-            // for (u32 i = 0; i < file->getVariations().size(); i++)
-            // {
-            //     InnerFile* innerFile = file->getInnerFile(i);
+            if (file.external || file.includeInBfsar || !file.innerFile)
+            {
+                continue;
+            }
 
-            //     bool embeddedInGroup = file->isEmbeddedInGroup(i);
-            //     if (file->getLocationType() == File::LocationType::Internal && embeddedInGroup)
-            //     {
-            //         SEAD_ASSERT(innerFile);
+            const InnerFile* innerFile = file.innerFile;
 
-            //         u32 writePos = innerFile->getWritePos();
-            //         u32 writeSize = innerFile->getWriteSize();
-            //         SEAD_ASSERT(writePos != 0xFFFFFFFF);
-            //         SEAD_ASSERT(writeSize != 0xFFFFFFFF);
+            u32 writePos = innerFile->getWritePos();
+            if (writePos != 0xFFFFFFFF)
+            {
+                u32 writeSize = innerFile->getWriteSize();
+                SEAD_ASSERT(writeSize != 0xFFFFFFFF);
 
-            //         sead::FormatFixedSafeString<32> refName("File%u", file->getId());
-            //         if (writer.hasSizedReference(refName))
-            //         {
-            //             writer.closeSizedReference(
-            //                 refName,
-            //                 nw::snd::internal::ElementType_General_ByteStream,
-            //                 writePos - fileBlockPos - sizeof(nw::ut::BinaryBlockHeader),
-            //                 writeSize
-            //             );
-            //         }
-            //     }
+                writer.closeSizedReference(
+                    sead::FormatFixedSafeString<32>("File%u", file.id),
+                    nw::snd::internal::ElementType_General_ByteStream,
+                    writePos - fileBlockPos - sizeof(nw::ut::BinaryBlockHeader),
+                    writeSize
+                );
+            }
+            else
+            {
+                u32 writeSize = innerFile->getWriteSize();
+                SEAD_ASSERT(writeSize == 0xFFFFFFFF);
 
-            //     if (innerFile)
-            //     {
-            //         innerFile->clearWriteInfo();
-            //     }
-            // }
+                writer.closeNullSizedReference(sead::FormatFixedSafeString<32>("File%u", file.id));
+            }
+
+            innerFile->clearWriteInfo();
         }
 
         writer.closeBlock();
     }
 
     writer.closeFile();
+
+    for (InnerFile* innerFile : generatedInnerFiles)
+    {
+        delete innerFile;
+    }
 
     for (const WaveArchive* warc : generatedWarcs)
     {

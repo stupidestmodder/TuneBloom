@@ -81,7 +81,7 @@ public:
         return mWriteSize;
     }
 
-    void clearWriteInfo()
+    void clearWriteInfo() const
     {
         mWritePos = 0xFFFFFFFF;
         mWriteSize = 0xFFFFFFFF;
