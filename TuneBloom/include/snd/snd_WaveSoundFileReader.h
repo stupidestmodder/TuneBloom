@@ -23,6 +23,12 @@ public:
 
     bool IsFilterSupportedVersion() const;
 
+    //? Added
+    const WaveSoundFile::WaveSoundInfo& GetWaveSoundInfo(u32 index) const
+    {
+        return mInfoBlockBody->GetWaveSoundData(index).GetWaveSoundInfo();
+    }
+
     const WaveSoundFile::FileHeader* mHeader;
     const WaveSoundFile::InfoBlockBody* mInfoBlockBody;
 };

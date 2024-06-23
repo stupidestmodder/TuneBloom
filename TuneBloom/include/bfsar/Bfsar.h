@@ -233,6 +233,11 @@ public:
 
     void updateList(Item::List& list);
 
+    u32 getVersionForBfwsd() const
+    {
+        return 0x00010100; // TODO
+    }
+
 private:
     void open_(sead::Heap* heap);
     void save_(sead::FileHandle& handle);

@@ -829,6 +829,49 @@ void Bfsar::open_(sead::Heap* heap)
             WaveFile* waveFile = static_cast<WaveFile*>(getItem(globalWaveIdx, getWaveFileList()));
 
             sound->mWaveSoundInfo.mWaveFileRef.attach(waveFile);
+
+            const nw::snd::internal::WaveSoundFile::WaveSoundInfo& innerWaveSoundInfo = reader.GetWaveSoundInfo(waveSoundInfo.index);
+
+            sound->mWaveSoundInfo.mEnablePan = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_PAN) != 0;
+            if (sound->mWaveSoundInfo.mEnablePan)
+            {
+                sound->mWaveSoundInfo.mPan = innerWaveSoundInfo.GetPan();
+                sound->mWaveSoundInfo.mSurroundPan = innerWaveSoundInfo.GetSurroundPan();
+            }
+
+            sound->mWaveSoundInfo.mEnablePitch = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_PITCH) != 0;
+            if (sound->mWaveSoundInfo.mEnablePitch)
+            {
+                sound->mWaveSoundInfo.mPitch = innerWaveSoundInfo.GetPitch();
+            }
+
+            sound->mWaveSoundInfo.mEnableSend = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_SEND) != 0;
+            if (sound->mWaveSoundInfo.mEnableSend)
+            {
+                innerWaveSoundInfo.GetSendValue(&sound->mWaveSoundInfo.mMainSend, sound->mWaveSoundInfo.mFxSend, nw::snd::AUX_BUS_NUM);
+            }
+
+            sound->mWaveSoundInfo.mEnableEnvelope = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_ENVELOPE) != 0;
+            if (sound->mWaveSoundInfo.mEnableEnvelope)
+            {
+                const nw::snd::AdshrCurve& adshrCurveInfo = innerWaveSoundInfo.GetAdshrCurve();
+                sound->mWaveSoundInfo.mAdshrCurve.attack = adshrCurveInfo.attack;
+                sound->mWaveSoundInfo.mAdshrCurve.decay = adshrCurveInfo.decay;
+                sound->mWaveSoundInfo.mAdshrCurve.sustain = adshrCurveInfo.sustain;
+                sound->mWaveSoundInfo.mAdshrCurve.hold = adshrCurveInfo.hold;
+                sound->mWaveSoundInfo.mAdshrCurve.release = adshrCurveInfo.release;
+            }
+
+            if (BfwsdFile::isFilterSupportedVersion(reader.mHeader->header.version))
+            {
+                sound->mWaveSoundInfo.mEnableFilter = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_FILTER) != 0;
+                if (sound->mWaveSoundInfo.mEnableFilter)
+                {
+                    sound->mWaveSoundInfo.mLpfFreq = innerWaveSoundInfo.GetLpfFreq();
+                    sound->mWaveSoundInfo.mBiquadType = innerWaveSoundInfo.GetBiquadType();
+                    sound->mWaveSoundInfo.mBiquadValue = innerWaveSoundInfo.GetBiquadValue();
+                }
+            }
         }
 
         mSoundList.pushBack(sound);
@@ -1071,6 +1114,7 @@ void Bfsar::save_(sead::FileHandle& handle)
 
     std::unordered_map<const Item*, VectorSet<const Group*>> itemAttachedGroups;
     std::unordered_map<const WaveArchive*, VectorSet<const WaveFile*>> warcWaveFiles;
+    std::unordered_map<const WaveArchive*, std::unordered_map<const WaveFile*, u32>> warcWaveFilesIndexes;
 
     auto delegateSoundSetWaveFiles = [&](const SoundSet* soundSet, const WaveArchive* warc)
     {
@@ -1086,10 +1130,16 @@ void Bfsar::save_(sead::FileHandle& handle)
                 continue;
             }
 
-            const WaveFile* waveFile = static_cast<const WaveFile*>(sound->getWaveSoundInfo().getWaveFileRef().getItem());
-            SEAD_ASSERT(waveFile);
+            const Item* waveFileItem = sound->getWaveSoundInfo().getWaveFileRef().getItem();
+            SEAD_ASSERT(waveFileItem);
+            SEAD_ASSERT(waveFileItem->getItemType() == Item::ItemType::WaveFile);
 
-            warcWaveFiles[warc].insert(waveFile);
+            const WaveFile* waveFile = static_cast<const WaveFile*>(waveFileItem);
+
+            VectorSet<const WaveFile*>& waveFiles = warcWaveFiles[warc];
+
+            warcWaveFilesIndexes[warc].try_emplace(waveFile, waveFiles.size());
+            waveFiles.insert(waveFile);
         }
     };
 
@@ -1113,10 +1163,16 @@ void Bfsar::save_(sead::FileHandle& handle)
                     SEAD_ASSERT(velocityRegionItem->getItemType() == Item::ItemType::BankFileVelocityRegion);
                     const BankFile::VelocityRegion* velocityRegion = static_cast<const BankFile::VelocityRegion*>(velocityRegionItem);
 
-                    const WaveFile* waveFile = static_cast<const WaveFile*>(velocityRegion->getWaveFileRef().getItem());
-                    SEAD_ASSERT(waveFile);
+                    const Item* waveFileItem = velocityRegion->getWaveFileRef().getItem();
+                    SEAD_ASSERT(waveFileItem);
+                    SEAD_ASSERT(waveFileItem->getItemType() == Item::ItemType::WaveFile);
 
-                    warcWaveFiles[warc].insert(waveFile);
+                    const WaveFile* waveFile = static_cast<const WaveFile*>(waveFileItem);
+
+                    VectorSet<const WaveFile*>& waveFiles = warcWaveFiles[warc];
+
+                    warcWaveFilesIndexes[warc].try_emplace(waveFile, waveFiles.size());
+                    waveFiles.insert(waveFile);
                 }
             }
         }
@@ -1954,7 +2010,7 @@ void Bfsar::save_(sead::FileHandle& handle)
                 }
             }
 
-            InnerFile* innerFile = new BfwsdFile();
+            InnerFile* innerFile = new BfwsdFile(mEndian, getVersionForBfwsd());
             generatedInnerFiles.push_back(innerFile);
 
             File file(files.size(), innerFile, includeInBfsar);
@@ -2995,7 +3051,7 @@ void Bfsar::save_(sead::FileHandle& handle)
                     SEAD_ASSERT(pair.first == nullptr);
                     const WaveArchive* warc = pair.second;
 
-                    bfwsdFile->prepare(soundSet, warc, true);
+                    bfwsdFile->prepare(soundSet, warc, warcWaveFilesIndexes, true);
                 }
             }
 

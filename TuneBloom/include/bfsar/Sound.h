@@ -472,6 +472,7 @@ public:
 
         void setPitch(f32 pitch)
         {
+            pitch = sead::Mathf::clamp2(0.0f, pitch, 8.0f);
             mPitch = pitch;
         }
 
@@ -603,7 +604,25 @@ public:
             , mEnablePriority(true)
             , mChannelPriority(64)
             , mIsReleasePriorityFix(false)
+
+            , mEnablePan(true)
+            , mPan(64)
+            , mSurroundPan(0)
+            , mEnablePitch(true)
+            , mPitch(1.0f)
+            , mEnableSend(true)
+            , mMainSend(127)
+            , mEnableEnvelope(true)
+            , mAdshrCurve(127, 127, 127, 127, 127)
+            , mEnableFilter(true)
+            , mLpfFreq(64)
+            , mBiquadType(0)
+            , mBiquadValue(0)
         {
+            for (u32 i = 0; i < 3; i++)
+            {
+                mFxSend[i] = 0;
+            }
         }
 
         const ItemReference& getWaveFileRef() const
@@ -663,6 +682,181 @@ public:
             mIsReleasePriorityFix = isReleasePriorityFix;
         }
 
+        bool isEnablePan() const
+        {
+            return mEnablePan;
+        }
+
+        void setEnablePan(bool enable)
+        {
+            mEnablePan = enable;
+        }
+
+        u8 getPan() const
+        {
+            if (mEnablePan)
+                return mPan;
+
+            return 64;
+        }
+
+        void setPan(u8 pan)
+        {
+            pan = sead::MathCalcCommon<u8>::clampMax(pan, 127);
+            mPan = pan;
+        }
+
+        s8 getSurroundPan() const
+        {
+            if (mEnablePan)
+                return mSurroundPan;
+
+            return 0;
+        }
+
+        void setSurroundPan(s8 span)
+        {
+            span = sead::MathCalcCommon<s8>::clamp2(0, span, 127);
+            mSurroundPan = span;
+        }
+
+        bool isEnablePitch() const
+        {
+            return mEnablePitch;
+        }
+
+        void setEnablePitch(bool enable)
+        {
+            mEnablePitch = enable;
+        }
+
+        f32 getPitch() const
+        {
+            if (mEnablePitch)
+                return mPitch;
+
+            return 1.0f;
+        }
+
+        void setPitch(f32 pitch)
+        {
+            pitch = sead::Mathf::clamp2(0.0f, pitch, 8.0f);
+            mPitch = pitch;
+        }
+
+        bool isEnableSend() const
+        {
+            return mEnableSend;
+        }
+
+        void setEnableSend(bool enable)
+        {
+            mEnableSend = enable;
+        }
+
+        u8 getMainSend() const
+        {
+            if (mEnableSend)
+                return mMainSend;
+
+            return 127;
+        }
+
+        void setMainSend(u8 mainSend)
+        {
+            mainSend = sead::MathCalcCommon<u8>::clampMax(mainSend, 127);
+            mMainSend = mainSend;
+        }
+
+        u8 getFxSend(u32 idx) const
+        {
+            SEAD_ASSERT(idx < 3);
+
+            if (mEnableSend)
+                return mFxSend[idx];
+
+            return 0;
+        }
+
+        void setFxSend(u32 idx, u8 fxSend)
+        {
+            SEAD_ASSERT(idx < 3);
+
+            fxSend = sead::MathCalcCommon<u8>::clampMax(fxSend, 127);
+            mFxSend[idx] = fxSend;
+        }
+
+        bool isEnableEnvelope() const
+        {
+            return mEnableEnvelope;
+        }
+
+        void setEnableEnvelope(bool enable)
+        {
+            mEnableEnvelope = enable;
+        }
+
+        const snd::AdshrCurve& getAdshrCurve() const
+        {
+            return mAdshrCurve;
+        }
+
+        void setAdshrCurve(const snd::AdshrCurve& curve)
+        {
+            mAdshrCurve = curve;
+        }
+
+        bool isEnableFilter() const
+        {
+            return mEnableFilter;
+        }
+
+        void setEnableFilter(bool enable)
+        {
+            mEnableFilter = enable;
+        }
+
+        u8 getLpfFreq() const
+        {
+            if (mEnableFilter)
+                return mLpfFreq;
+
+            return 64;
+        }
+
+        void setLpfFreq(u8 freq)
+        {
+            freq = sead::MathCalcCommon<u8>::clampMax(freq, 64);
+            mLpfFreq = freq;
+        }
+
+        u8 getBiquadType() const
+        {
+            if (mEnableFilter)
+                return mBiquadType;
+
+            return 0;
+        }
+
+        void setBiquadType(u8 biquadType)
+        {
+            mBiquadType = biquadType;
+        }
+
+        u8 getBiquadValue() const
+        {
+            if (mEnableFilter)
+                return mBiquadValue;
+
+            return 0;
+        }
+
+        void setBiquadValue(u8 biquadValue)
+        {
+            biquadValue = sead::MathCalcCommon<u8>::clampMax(biquadValue, 127);
+            mBiquadValue = biquadValue;
+        }
+
     private:
         ItemReference mWaveFileRef;
 
@@ -670,6 +864,21 @@ public:
         bool mEnablePriority;
         u8 mChannelPriority;
         bool mIsReleasePriorityFix;
+
+        bool mEnablePan;
+        u8 mPan;
+        s8 mSurroundPan;
+        bool mEnablePitch;
+        f32 mPitch;
+        bool mEnableSend;
+        u8 mMainSend;
+        u8 mFxSend[3];
+        bool mEnableEnvelope;
+        snd::AdshrCurve mAdshrCurve;
+        bool mEnableFilter;
+        u8 mLpfFreq;
+        u8 mBiquadType;
+        u8 mBiquadValue;
 
         friend class Bfsar;
     };
