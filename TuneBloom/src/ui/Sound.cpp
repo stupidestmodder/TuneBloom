@@ -6,6 +6,7 @@ void DrawSoundPropertiesUI()
 {
     Sound* sound = static_cast<Sound*>(sSelectedItem);
 
+    const ImS8 cStepS8 = 1;
     const ImU8 cStepU8 = 1;
     const ImU16 cStepU16 = 1;
     const ImU32 cStepU32 = 1;
@@ -641,6 +642,176 @@ void DrawSoundPropertiesUI()
                 }
 
                 if (!enablePriority)
+                    ImGui::EndDisabled();
+            }
+
+            {
+                bool enablePan = waveSoundInfo.isEnablePan();
+                if (ImGui::Checkbox("Enable Pan", &enablePan))
+                {
+                    waveSoundInfo.setEnablePan(enablePan);
+                }
+
+                if (!enablePan)
+                    ImGui::BeginDisabled();
+
+                {
+                    u8 pan = waveSoundInfo.getPan();
+                    if (ImGui::InputScalar("Pan", ImGuiDataType_U8, &pan, &cStepU8))
+                    {
+                        waveSoundInfo.setPan(pan);
+                    }
+                }
+
+                {
+                    s8 surroundPan = waveSoundInfo.getSurroundPan();
+                    if (ImGui::InputScalar("Surround Pan", ImGuiDataType_S8, &surroundPan, &cStepS8))
+                    {
+                        waveSoundInfo.setSurroundPan(surroundPan);
+                    }
+                }
+
+                if (!enablePan)
+                    ImGui::EndDisabled();
+            }
+
+            {
+                bool enablePitch = waveSoundInfo.isEnablePitch();
+                if (ImGui::Checkbox("Enable Pitch", &enablePitch))
+                {
+                    waveSoundInfo.setEnablePitch(enablePitch);
+                }
+
+                if (!enablePitch)
+                    ImGui::BeginDisabled();
+
+                {
+                    f32 pitch = waveSoundInfo.getPitch();
+                    if (ImGui::SliderFloat("Pitch", &pitch, 0.0f, 8.0f))
+                    {
+                        waveSoundInfo.setPitch(pitch);
+                    }
+                }
+
+                if (!enablePitch)
+                    ImGui::EndDisabled();
+            }
+
+            {
+                bool enableSend = waveSoundInfo.isEnableSend();
+                if (ImGui::Checkbox("Enable Send", &enableSend))
+                {
+                    waveSoundInfo.setEnableSend(enableSend);
+                }
+
+                if (!enableSend)
+                    ImGui::BeginDisabled();
+
+                {
+                    u8 mainSend = waveSoundInfo.getMainSend();
+                    if (ImGui::InputScalar("Main Send", ImGuiDataType_U8, &mainSend, &cStepU8))
+                    {
+                        waveSoundInfo.setMainSend(mainSend);
+                    }
+                }
+
+                for (u32 i = 0; i < 3; i++)
+                {
+                    u8 fxSend = waveSoundInfo.getFxSend(i);
+                    if (ImGui::InputScalar(sead::FormatFixedSafeString<16>("Fx Send %u", i).cstr(), ImGuiDataType_U8, &fxSend, &cStepU8))
+                    {
+                        waveSoundInfo.setFxSend(i, fxSend);
+                    }
+                }
+
+                if (!enableSend)
+                    ImGui::EndDisabled();
+            }
+
+            {
+                bool enableEnvelope = waveSoundInfo.isEnableEnvelope();
+                if (ImGui::Checkbox("Enable Envelope", &enableEnvelope))
+                {
+                    waveSoundInfo.setEnableEnvelope(enableEnvelope);
+                }
+
+                if (!enableEnvelope)
+                    ImGui::BeginDisabled();
+
+                {
+                    snd::AdshrCurve adshrCurve = waveSoundInfo.getAdshrCurve();
+
+                    bool edited = false;
+                    // if (ImGui::InputScalar("Attack", ImGuiDataType_U8, &adshrCurve.attack, &cStepU8))
+                    // {
+                    //     edited = true;
+                    // }
+
+                    // if (ImGui::InputScalar("Decay", ImGuiDataType_U8, &adshrCurve.decay, &cStepU8))
+                    // {
+                    //     edited = true;
+                    // }
+
+                    // if (ImGui::InputScalar("Sustain", ImGuiDataType_U8, &adshrCurve.sustain, &cStepU8))
+                    // {
+                    //     edited = true;
+                    // }
+
+                    // if (ImGui::InputScalar("Hold", ImGuiDataType_U8, &adshrCurve.hold, &cStepU8))
+                    // {
+                    //     edited = true;
+                    // }
+
+                    if (ImGui::InputScalar("Release", ImGuiDataType_U8, &adshrCurve.release, &cStepU8))
+                    {
+                        edited = true;
+                    }
+
+                    if (edited)
+                    {
+                        waveSoundInfo.setAdshrCurve(adshrCurve);
+                    }
+                }
+
+                if (!enableEnvelope)
+                    ImGui::EndDisabled();
+            }
+
+            {
+                bool enableFilter = waveSoundInfo.isEnableFilter();
+                if (ImGui::Checkbox("Enable Filter", &enableFilter))
+                {
+                    waveSoundInfo.setEnableFilter(enableFilter);
+                }
+
+                if (!enableFilter)
+                    ImGui::BeginDisabled();
+
+                {
+                    u8 lpfFreq = waveSoundInfo.getLpfFreq();
+                    if (ImGui::InputScalar("LPF Frequency", ImGuiDataType_U8, &lpfFreq, &cStepU8))
+                    {
+                        waveSoundInfo.setLpfFreq(lpfFreq);
+                    }
+                }
+
+                {
+                    u8 biquadType = waveSoundInfo.getBiquadType();
+                    if (ImGui::InputScalar("Biquad Type", ImGuiDataType_U8, &biquadType, &cStepU8))
+                    {
+                        waveSoundInfo.setBiquadType(biquadType);
+                    }
+                }
+
+                {
+                    u8 biquadValue = waveSoundInfo.getBiquadValue();
+                    if (ImGui::InputScalar("Biquad Value", ImGuiDataType_U8, &biquadValue, &cStepU8))
+                    {
+                        waveSoundInfo.setBiquadValue(biquadValue);
+                    }
+                }
+
+                if (!enableFilter)
                     ImGui::EndDisabled();
             }
 

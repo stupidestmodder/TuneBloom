@@ -798,12 +798,22 @@ public:
 
         const snd::AdshrCurve& getAdshrCurve() const
         {
-            return mAdshrCurve;
+            if (mEnableEnvelope)
+                return mAdshrCurve;
+
+            static const snd::AdshrCurve cNullAdshrCurve(127, 127, 127, 127, 127);
+            return cNullAdshrCurve;
         }
 
         void setAdshrCurve(const snd::AdshrCurve& curve)
         {
             mAdshrCurve = curve;
+
+            mAdshrCurve.attack = sead::MathCalcCommon<u8>::clampMax(mAdshrCurve.attack, 127);
+            mAdshrCurve.decay = sead::MathCalcCommon<u8>::clampMax(mAdshrCurve.decay, 127);
+            mAdshrCurve.sustain = sead::MathCalcCommon<u8>::clampMax(mAdshrCurve.sustain, 127);
+            mAdshrCurve.hold = sead::MathCalcCommon<u8>::clampMax(mAdshrCurve.hold, 127);
+            mAdshrCurve.release = sead::MathCalcCommon<u8>::clampMax(mAdshrCurve.release, 127);
         }
 
         bool isEnableFilter() const
