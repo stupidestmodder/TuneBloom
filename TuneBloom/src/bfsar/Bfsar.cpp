@@ -2513,7 +2513,7 @@ void Bfsar::save_(sead::FileHandle& handle)
             InnerFile* innerFile = new BfwarFile(mEndian, getVersionForBfwar(), warcWaveFiles[warc]);
             generatedInnerFiles.push_back(innerFile);
 
-            File file(files.size(), innerFile, !itemInEmbedGroup(warc)); // TODO: BFWAR file
+            File file(files.size(), innerFile, !itemInEmbedGroup(warc));
 
             itemFileIds.try_emplace(warc, file);
             files.push_back(file);
@@ -2551,7 +2551,7 @@ void Bfsar::save_(sead::FileHandle& handle)
             InnerFile* innerFile = new BfwarFile(mEndian, getVersionForBfwar(), warcWaveFiles[warc]);
             generatedInnerFiles.push_back(innerFile);
 
-            File file(files.size(), innerFile, includeInBfsar); // TODO: BFWAR file
+            File file(files.size(), innerFile, includeInBfsar);
 
             itemFileIds.try_emplace(warc, file);
             files.push_back(file);
