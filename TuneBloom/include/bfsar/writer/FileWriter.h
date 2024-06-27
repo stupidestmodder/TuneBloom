@@ -164,6 +164,7 @@ public:
     void openReferenceTable(const sead::SafeString& name, u32 count);
     void closeReferenceTable(const sead::SafeString& name);
     void addReferenceTableReference(const sead::SafeString& name, u16 typeId);
+    void addReferenceTableNullReference(const sead::SafeString& name, u16 typeId);
 
     void openSizedReferenceTable(const sead::SafeString& name, u32 count);
     void closeSizedReferenceTable(const sead::SafeString& name);

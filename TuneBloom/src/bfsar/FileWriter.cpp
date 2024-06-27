@@ -453,6 +453,19 @@ void FileWriter::addReferenceTableReference(const sead::SafeString& name, u16 ty
     table.add(typeId, getPosition() - table.offset - mBlockPos);
 }
 
+void FileWriter::addReferenceTableNullReference(const sead::SafeString& name, u16 typeId)
+{
+    if (!mReferenceTables.contains(name.cstr()))
+    {
+        SEAD_ASSERT_MSG(false, "reference table not found");
+        return;
+    }
+
+    ReferenceTable& table = mReferenceTables[name.cstr()];
+
+    table.add(typeId, -1);
+}
+
 void FileWriter::openSizedReferenceTable(const sead::SafeString& name, u32 count)
 {
     if (mSizedReferenceTables.contains(name.cstr()))
