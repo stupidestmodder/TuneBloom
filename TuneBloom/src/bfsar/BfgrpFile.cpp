@@ -11,6 +11,10 @@
 
 #include <snd/snd_GroupFile.h>
 
+#include <ui/UI.h>
+
+#include <algorithm>
+
 u32 BfgrpFile::doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool isLast) const
 {
     SEAD_ASSERT(mGroup);
@@ -199,6 +203,13 @@ u32 BfgrpFile::doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool
                     nw::snd::internal::ElementType_General_ByteStream,
                     size
                 );
+
+                // {
+                //     u32 prevPos = writer.getPosition();
+                //     writer.seek(pos);
+                //     stream->writeU16(file.id);
+                //     writer.seek(prevPos);
+                // }
             }
         }
 
@@ -212,18 +223,15 @@ u32 BfgrpFile::doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool
 
         writer.openReferenceTable("ItemInfoExTable", mGroup->getItemInfoList().size());
 
-        for (const Item* item : mGroup->getItemInfoList())
+        auto writeGroupItem = [&](const Group::ItemInfo& itemInfo)
         {
-            SEAD_ASSERT(item->getItemType() == Item::ItemType::GroupItemInfo);
-            const Group::ItemInfo* itemInfo = static_cast<const Group::ItemInfo*>(item);
-
             writer.addReferenceTableReference("ItemInfoExTable", nw::snd::internal::ElementType_GroupFile_GroupItemInfoEx);
 
-            u32 itemId = 0; //? Idk why not 0xFFFFFFFF... 
-            if (itemInfo->getItemRef().isAttached())
+            u32 itemId = 0; //? Idk why not nw::snd::SoundArchive::INVALID_ID... 
+            if (itemInfo.getItemRef().isAttached())
             {
                 nw::snd::internal::ItemType itemType;
-                switch (itemInfo->getItemRefType())
+                switch (itemInfo.getItemRefType())
                 {
                     case Item::ItemType::Sound:
                         itemType = nw::snd::internal::ItemType_Sound;
@@ -246,11 +254,56 @@ u32 BfgrpFile::doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool
                         break;
                 }
 
-                itemId = nw::snd::internal::Util::GetMaskedItemId(itemInfo->getItemRef().getItemId(), itemType);
+                itemId = nw::snd::internal::Util::GetMaskedItemId(itemInfo.getItemRef().getItemId(), itemType);
             }
 
             stream->writeU32(itemId);
-            stream->writeU32(itemInfo->getLoadFlag());
+            stream->writeU32(itemInfo.getLoadFlag());
+        };
+
+        if (sBfsar.getVersion() <= 0x00020000)
+        {
+            for (const Item* item : mGroup->getItemInfoList())
+            {
+                SEAD_ASSERT(item->getItemType() == Item::ItemType::GroupItemInfo);
+                const Group::ItemInfo* itemInfo = static_cast<const Group::ItemInfo*>(item);
+
+                writeGroupItem(*itemInfo);
+            }
+        }
+        else
+        {
+            std::vector<const Group::ItemInfo*> itemInfos;
+
+            for (const Item* item : mGroup->getItemInfoList())
+            {
+                SEAD_ASSERT(item->getItemType() == Item::ItemType::GroupItemInfo);
+                const Group::ItemInfo* itemInfo = static_cast<const Group::ItemInfo*>(item);
+
+                if (!itemInfo->getItemRef().isAttached())
+                {
+                    continue;
+                }
+
+                itemInfos.push_back(itemInfo);
+            }
+
+            std::sort(itemInfos.begin(), itemInfos.end(), [](const Group::ItemInfo* a, const Group::ItemInfo* b) -> bool
+                {
+                    SEAD_ASSERT(a->getItemRef().isAttached());
+                    SEAD_ASSERT(b->getItemRef().isAttached());
+
+                    const Item* aItem = a->getItemRef().getItem();
+                    const Item* bItem = b->getItemRef().getItem();
+
+                    return aItem->getIdWithType() < bItem->getIdWithType();
+                }
+            );
+
+            for (const Group::ItemInfo* itemInfo : itemInfos)
+            {
+                writeGroupItem(*itemInfo);
+            }
         }
 
         writer.closeReferenceTable("ItemInfoExTable");
