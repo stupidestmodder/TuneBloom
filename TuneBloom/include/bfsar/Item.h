@@ -188,6 +188,35 @@ public:
         return mId;
     }
 
+    u32 getIdWithType() const
+    {
+        SEAD_ASSERT(ItemType::Invalid < mItemType && mItemType < ItemType::InternalFileTypes);
+
+        switch (mItemType)
+        {
+            case ItemType::Sound:
+                return nw::snd::internal::Util::GetMaskedItemId(mId, nw::snd::internal::ItemType_Sound);
+
+            case ItemType::SoundSet:
+                return nw::snd::internal::Util::GetMaskedItemId(mId, nw::snd::internal::ItemType_SoundGroup);
+
+            case ItemType::Bank:
+                return nw::snd::internal::Util::GetMaskedItemId(mId, nw::snd::internal::ItemType_Bank);
+
+            case ItemType::Player:
+                return nw::snd::internal::Util::GetMaskedItemId(mId, nw::snd::internal::ItemType_Player);
+
+            case ItemType::WaveArchive:
+                return nw::snd::internal::Util::GetMaskedItemId(mId, nw::snd::internal::ItemType_WaveArchive);
+
+            case ItemType::Group:
+                return nw::snd::internal::Util::GetMaskedItemId(mId, nw::snd::internal::ItemType_Group);
+        }
+
+        SEAD_ASSERT(false);
+        return mId;
+    }
+
     void setId(u32 id)
     {
         mId = id;
