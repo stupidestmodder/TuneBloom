@@ -3660,6 +3660,10 @@ void Bfsar::save_(sead::FileHandle& handle)
                                             stream.writeU32(strmInfo.getPrefetchFileId());
                                         }
                                     }
+                                    else
+                                    {
+                                        stream.writeU32(0); //! Unknown
+                                    }
 
                                     if (strmInfo.getTracks().size() > 0)
                                     {
