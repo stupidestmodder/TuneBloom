@@ -204,7 +204,8 @@ public:
     static volatile s16 sGlobalVariable[cGlobalVariableNum];
     static volatile s32 sSkipIntervalTickPerFrame;
 
-    const SequenceTrack& getTrack_(s32 trackNo)
+    //? Get track reference even if it's not active
+    const SequenceTrack& getTrack_(s32 trackNo) const
     {
         SEAD_ASSERT(0 <= trackNo && trackNo < cTrackNumPerPlayer);
         return mTrackInstances[trackNo];
