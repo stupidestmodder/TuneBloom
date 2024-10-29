@@ -3,64 +3,108 @@
 #include <bfsar/Item.h>
 #include <bfsar/InnerFile.h>
 
+#include <SeqTextInfo.h>
+
+#include <vector>
+#include <string>
+#include <unordered_map>
+
+class MmlCommandBase;
+class TextEditor;
+
 class SequenceFile : public Item, public InnerFile
 {
+public:
+    struct LabelStartInfo
+    {
+        u32 offset;
+
+        u32 parsedOffset; // If offset points to a alloctrack command this is offset by +3 bytes
+        u32 allocTrackFlags;
+    };
+
+    static const u32 cInvaldOffset = 0xFFFFFFFF;
+
 public:
     SequenceFile()
         : Item()
         , InnerFile()
-        , mData(nullptr)
-        , mDataSize(0)
+        , mIsValid(false)
+        , mIsDirty(false)
+        , mTextEditor(nullptr)
+        , mSeqTextInfo()
+        , mSeqText(nullptr)
+
+        , mSeqBytes(nullptr)
+        , mSeqBytesSize(0)
+        , mLabelsStartInfo()
+        , mLabels()
+        , mOffsetToLine()
+
+        , mStartLabel()
     {
         mItemType = ItemType::SequenceFile;
-    }
 
-    ~SequenceFile()
-    {
-        if (mData)
+        for (u32 i = 0; i < 4; i++)
         {
-            delete[] mData;
-            mData = nullptr;
+            mBankRefs[i] = new ItemReference(this);
         }
     }
 
-    void drawUI() override
-    {
-        InnerFile::drawUI();
-    }
+    ~SequenceFile() override;
+
+    void onOpenFileWindow() override;
+    void onCloseFileWindow() override;
+
+    void drawUI() override;
+    void drawFileUI();
 
 private:
-    void doRead(const void* fileAddr) override
-    {
-    }
+    void doRead(const void* fileAddr) override;
+    u32 doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool isLast) const override;
 
-    u32 doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool isLast) const override
-    {
-        //SEAD_ASSERT(false);
-        //return 0;
-
-        stream->writeMemBlock(mData, mDataSize);
-        return mDataSize;
-    }
+    void compile_(bool setCursorPos = true);
+    MmlCommandBase* parseCommand_(const std::string& str, const std::vector<std::string>& args, std::string& errorMsg);
 
 public:
-    void read(const void* fileAddr, u32 fileSize)
+    bool isValid() const
     {
-        SEAD_ASSERT(!mData);
-
-        mDataSize = fileSize;
-        mData = new u8[fileSize];
-        sead::MemUtil::copy(mData, fileAddr, fileSize);
-
-        InnerFile::read(fileAddr);
+        return mIsValid;
     }
 
-    const u8* getData() const
+    bool isDirty() const
     {
-        return mData;
+        return mIsDirty;
+    }
+
+    const u8* getSeqBytes() const
+    {
+        return mSeqBytes;
+    }
+
+    u32 getLabelOffset(const sead::SafeString& label) const;
+    u32 getLabelAllocTracks(const sead::SafeString& label) const;
+
+    std::string getLabelFromParsedOffset(u32 offset, u32 allocTrackFlags) const;
+
+    const std::vector<std::string>& getLabels() const
+    {
+        return mLabels;
     }
 
 private:
-    u8* mData;
-    u32 mDataSize;
+    bool mIsValid;
+    bool mIsDirty;
+    TextEditor* mTextEditor;
+    SeqTextInfo mSeqTextInfo;
+    sead::HeapSafeString* mSeqText;
+
+    u8* mSeqBytes;
+    u32 mSeqBytesSize;
+    std::unordered_map<std::string, LabelStartInfo> mLabelsStartInfo;
+    std::vector<std::string> mLabels;
+    std::unordered_map<u32, u32> mOffsetToLine;
+
+    ItemReference* mBankRefs[4];
+    sead::FixedSafeString<128> mStartLabel;
 };

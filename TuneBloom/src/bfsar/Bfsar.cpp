@@ -449,7 +449,7 @@ void Bfsar::open_(sead::Heap* heap)
         sequence->mEnableName = true;
         sequence->mName = "Sequence";
 
-        sequence->read(seqFile, seqFileSize);
+        sequence->read(seqFile);
 
         mSequenceFileList.pushBack(sequence);
 
@@ -1331,11 +1331,17 @@ void Bfsar::open_(sead::Heap* heap)
                 }
             }
 
-            sound->mSequenceSoundInfo.mAllocateTrackFlags = seqSoundInfo.allocateTrackFlags;
+            u32 globalSeqIdx = seqFileIdxMap[soundInfo->fileId];
+            SequenceFile* seqFile = static_cast<SequenceFile*>(getItem(globalSeqIdx, getSequenceFileList()));
+
+            sound->mSequenceSoundInfo.mSequenceFileRef.attach(seqFile);
 
             sound->mSequenceSoundInfo.mEnableStartOffset = seqSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::SEQ_SOUND_INFO_START_OFFSET) != 0;
-            if (sound->mSequenceSoundInfo.mEnableStartOffset)
-                sound->mSequenceSoundInfo.mStartOffset = seqSoundInfo.GetStartOffset();
+            if (sound->mSequenceSoundInfo.mEnableStartOffset && seqFile)
+            {
+                std::string label = seqFile->getLabelFromParsedOffset(seqSoundInfo.GetStartOffset(), seqSoundInfo.allocateTrackFlags);
+                sound->mSequenceSoundInfo.mStartLabel.copy(label.c_str());
+            }
 
             sound->mSequenceSoundInfo.mEnablePriority = seqSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::SEQ_SOUND_INFO_PRIORITY) != 0;
             if (sound->mSequenceSoundInfo.mEnablePriority)
@@ -1343,11 +1349,6 @@ void Bfsar::open_(sead::Heap* heap)
                 sound->mSequenceSoundInfo.mChannelPriority = seqSoundInfo.GetChannelPriority();
                 sound->mSequenceSoundInfo.mIsReleasePriorityFix = seqSoundInfo.IsReleasePriorityFix();
             }
-
-            u32 globalSeqIdx = seqFileIdxMap[soundInfo->fileId];
-            SequenceFile* seqFile = static_cast<SequenceFile*>(getItem(globalSeqIdx, getSequenceFileList()));
-
-            sound->mSequenceSoundInfo.mSequenceFileRef.attach(seqFile);
         }
         else if (sound->mSoundType == Sound::SoundType::Strm)
         {
@@ -2134,6 +2135,11 @@ void Bfsar::open_(sead::Heap* heap)
 
         updateList(mWaveFileList);
     }
+
+    // for (const Item* sound : mSoundList)
+    // {
+    //     SEAD_PRINT("%s\n", sound->getNameOrNull().cstr());
+    // }
 }
 
 template <typename T>

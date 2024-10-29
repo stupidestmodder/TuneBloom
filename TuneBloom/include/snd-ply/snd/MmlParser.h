@@ -45,4 +45,6 @@ public:
     static s32  ReadVar( const u8** ptr );
     static s32  ReadArg( const u8** ptr, SequenceSoundPlayer* player, SequenceTrack* track, SeqArgType argType );
     static volatile s16* GetVariablePtr( SequenceSoundPlayer* player, SequenceTrack* track, int varNo );
+
+    static u32 ParseAllocTrack( const void* baseAddress, u32 seqOffset, u32* allocTrack );
 };

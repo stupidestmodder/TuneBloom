@@ -1,6 +1,7 @@
 #pragma once
 
 #include <bfsar/Item.h>
+#include <bfsar/SequenceFile.h>
 
 #include <snd/Global.h>
 
@@ -101,9 +102,10 @@ public:
         SequenceSoundInfo(Sound* owner)
             : mSequenceFileRef(owner)
             , mBankRefs()
-            , mAllocateTrackFlags(0)
+            //, mAllocateTrackFlags(0)
             , mEnableStartOffset(true)
-            , mStartOffset(0)
+            //, mStartOffset(0)
+            , mStartLabel()
             , mEnablePriority(true)
             , mChannelPriority(64)
             , mIsReleasePriorityFix(false)
@@ -153,13 +155,18 @@ public:
 
         u32 getAllocateTrackFlags() const
         {
-            return mAllocateTrackFlags;
+            const Item* item = mSequenceFileRef.getItem();
+            if (!item || item->getItemType() != ItemType::SequenceFile)
+                return 0;
+
+            const SequenceFile* seqFile = static_cast<const SequenceFile*>(item);
+            return seqFile->getLabelAllocTracks(mStartLabel);
         }
 
-        void setAllocateTrackFlags(u32 flags)
-        {
-            mAllocateTrackFlags = flags;
-        }
+        // void setAllocateTrackFlags(u32 flags)
+        // {
+        //     mAllocateTrackFlags = flags;
+        // }
 
         bool isEnableStartOffset() const
         {
@@ -173,15 +180,33 @@ public:
 
         u32 getStartOffset() const
         {
-            if (mEnableStartOffset)
-                return mStartOffset;
+            if (!mEnableStartOffset)
+                return 0;
 
-            return 0;
+            const Item* item = mSequenceFileRef.getItem();
+            if (!item || item->getItemType() != ItemType::SequenceFile)
+                return 0;
+
+            const SequenceFile* seqFile = static_cast<const SequenceFile*>(item);
+            return seqFile->getLabelOffset(mStartLabel);
         }
 
-        void setStartOffset(u32 startOffset)
+        // void setStartOffset(u32 startOffset)
+        // {
+        //     mStartOffset = startOffset;
+        // }
+
+        sead::SafeString getStartLabel() const
         {
-            mStartOffset = startOffset;
+            if (mEnableStartOffset)
+                return mStartLabel;
+
+            return "";
+        }
+
+        sead::FixedSafeString<128>& getStartLabel()
+        {
+            return mStartLabel;
         }
 
         bool isEnablePriority() const
@@ -225,9 +250,10 @@ public:
         ItemReference mSequenceFileRef;
 
         ItemReference* mBankRefs[4];
-        u32 mAllocateTrackFlags;
+        //u32 mAllocateTrackFlags;
         bool mEnableStartOffset;
-        u32 mStartOffset;
+        //u32 mStartOffset;
+        sead::FixedSafeString<128> mStartLabel; // TODO: How big ?
         bool mEnablePriority;
         u8 mChannelPriority;
         bool mIsReleasePriorityFix;

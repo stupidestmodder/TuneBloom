@@ -268,6 +268,14 @@ public:
         return mReferences;
     }
 
+    virtual void onOpenFileWindow()
+    {
+    }
+
+    virtual void onCloseFileWindow()
+    {
+    }
+
 private:
     void addReference_(ItemReference* ref)
     {

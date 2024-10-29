@@ -578,15 +578,15 @@ void TextEditor::RemoveLine(int aStart, int aEnd)
 	assert(aEnd >= aStart);
 	assert(mLines.size() > (size_t)(aEnd - aStart));
 
-	ErrorMarkers etmp;
-	for (auto& i : mErrorMarkers)
+	Markers etmp;
+	for (auto& i : mMarkers)
 	{
-		ErrorMarkers::value_type e(i.first >= aStart ? i.first - 1 : i.first, i.second);
+		Markers::value_type e(i.first >= aStart ? i.first - 1 : i.first, i.second);
 		if (e.first >= aStart && e.first <= aEnd)
 			continue;
 		etmp.insert(e);
 	}
-	mErrorMarkers = std::move(etmp);
+	mMarkers = std::move(etmp);
 
 	Breakpoints btmp;
 	for (auto i : mBreakpoints)
@@ -608,15 +608,15 @@ void TextEditor::RemoveLine(int aIndex)
 	assert(!mReadOnly);
 	assert(mLines.size() > 1);
 
-	ErrorMarkers etmp;
-	for (auto& i : mErrorMarkers)
+	Markers etmp;
+	for (auto& i : mMarkers)
 	{
-		ErrorMarkers::value_type e(i.first > aIndex ? i.first - 1 : i.first, i.second);
+		Markers::value_type e(i.first > aIndex ? i.first - 1 : i.first, i.second);
 		if (e.first - 1 == aIndex)
 			continue;
 		etmp.insert(e);
 	}
-	mErrorMarkers = std::move(etmp);
+	mMarkers = std::move(etmp);
 
 	Breakpoints btmp;
 	for (auto i : mBreakpoints)
@@ -639,10 +639,10 @@ TextEditor::Line& TextEditor::InsertLine(int aIndex)
 
 	auto& result = *mLines.insert(mLines.begin() + aIndex, Line());
 
-	ErrorMarkers etmp;
-	for (auto& i : mErrorMarkers)
-		etmp.insert(ErrorMarkers::value_type(i.first >= aIndex ? i.first + 1 : i.first, i.second));
-	mErrorMarkers = std::move(etmp);
+	Markers etmp;
+	for (auto& i : mMarkers)
+		etmp.insert(Markers::value_type(i.first >= aIndex ? i.first + 1 : i.first, i.second));
+	mMarkers = std::move(etmp);
 
 	Breakpoints btmp;
 	for (auto i : mBreakpoints)
@@ -935,21 +935,36 @@ void TextEditor::Render()
 			}
 
 			// Draw error markers
-			auto errorIt = mErrorMarkers.find(lineNo + 1);
-			if (errorIt != mErrorMarkers.end())
+			auto errorIt = mMarkers.find(lineNo + 1);
+			if (errorIt != mMarkers.end())
 			{
-				auto end = ImVec2(lineStartScreenPos.x + contentSize.x + 2.0f * scrollX, lineStartScreenPos.y + mCharAdvance.y);
-				drawList->AddRectFilled(start, end, mPalette[(int)PaletteIndex::ErrorMarker]);
+				int markerLine = errorIt->first;
+				const Marker& marker = errorIt->second;
+				bool isError = marker.mIsError;
+				bool showDetail = marker.mShowDetail;
+				ImU32 rectColor = isError ? mPalette[(int)PaletteIndex::ErrorMarker] : marker.mColor;
 
-				if (ImGui::IsMouseHoveringRect(lineStartScreenPos, end))
+				auto end = ImVec2(lineStartScreenPos.x + contentSize.x + 2.0f * scrollX, lineStartScreenPos.y + mCharAdvance.y);
+				drawList->AddRectFilled(start, end, rectColor);
+
+				if (showDetail && !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopup) && ImGui::IsMouseHoveringRect(lineStartScreenPos, end))
 				{
 					ImGui::BeginTooltip();
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
-					ImGui::Text("Error at line %d:", errorIt->first);
-					ImGui::PopStyleColor();
-					ImGui::Separator();
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.2f, 1.0f));
-					ImGui::Text("%s", errorIt->second.c_str());
+					if (isError)
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+						ImGui::Text("Error at line %d:", markerLine);
+						ImGui::PopStyleColor();
+
+						ImGui::Separator();
+
+						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.2f, 1.0f));
+					}
+					else
+					{
+						ImGui::PushStyleColor(ImGuiCol_Text, rectColor);
+					}
+					ImGui::Text("%s", marker.mDetail.c_str());
 					ImGui::PopStyleColor();
 					ImGui::EndTooltip();
 				}
@@ -1113,7 +1128,7 @@ void TextEditor::Render()
 	if (mScrollToCursor)
 	{
 		EnsureCursorVisible();
-		ImGui::SetWindowFocus();
+		//ImGui::SetWindowFocus();
 		mScrollToCursor = false;
 	}
 }
@@ -1850,10 +1865,10 @@ void TextEditor::Backspace()
 			auto prevSize = GetLineMaxColumn(mState.mCursorPosition.mLine - 1);
 			prevLine.insert(prevLine.end(), line.begin(), line.end());
 
-			ErrorMarkers etmp;
-			for (auto& i : mErrorMarkers)
-				etmp.insert(ErrorMarkers::value_type(i.first - 1 == mState.mCursorPosition.mLine ? i.first - 1 : i.first, i.second));
-			mErrorMarkers = std::move(etmp);
+			Markers etmp;
+			for (auto& i : mMarkers)
+				etmp.insert(Markers::value_type(i.first - 1 == mState.mCursorPosition.mLine ? i.first - 1 : i.first, i.second));
+			mMarkers = std::move(etmp);
 
 			RemoveLine(mState.mCursorPosition.mLine);
 			--mState.mCursorPosition.mLine;

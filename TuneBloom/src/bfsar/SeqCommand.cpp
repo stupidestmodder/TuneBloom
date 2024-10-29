@@ -21,7 +21,7 @@ SeqArgBase* nw__snd__internal__driver__MmlParser__ReadArg(const u8** ptr, MmlPar
     return nullptr;
 }
 
-const char* const MmlCommandNote::sKeys[MmlCommandNote::sKeysNum] = {
+const char* MmlCommandNote::sKeys[MmlCommandNote::sKeysNum] = {
     "cnm1", "csm1", "dnm1", "dsm1", "enm1", "fnm1", "fsm1", "gnm1",
     "gsm1", "anm1", "asm1", "bnm1", "cn0",  "cs0",  "dn0",  "ds0",
     "en0",  "fn0",  "fs0",  "gn0",  "gs0",  "an0",  "as0",  "bn0",
@@ -343,7 +343,7 @@ MmlCommandBase* nw__snd__internal__driver__MmlParser__Parse(const u8*& trackData
             {
             case MmlCommand::MML_ALLOC_TRACK:
                 arg = nw__snd__internal__driver__MmlParser__ReadArg(&trackData, MmlParser::SEQ_ARG_S16);
-                cmdInst = new MmlCommandAllocTrack(arg);
+                cmdInst = new MmlCommandAllocTrack(arg, conditional);
                 break;
 
             case MmlCommand::MML_FIN:

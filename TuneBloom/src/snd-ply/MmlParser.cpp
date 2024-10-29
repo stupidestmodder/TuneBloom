@@ -74,9 +74,12 @@ SequenceTrack::ParseResult MmlParser::parse(SequenceTrack* track, bool doNoteOn)
             player,
             track,
             useArgType ? argType : SEQ_ARG_VMIDI
-      );
+        );
+
         int key = static_cast<int>(cmd) + trackParam.transpose;
-        if (! doExecCommand) return SequenceTrack::PARSE_RESULT_CONTINUE;
+
+        if (!doExecCommand)
+            return SequenceTrack::PARSE_RESULT_CONTINUE;
 
         key = sead::Mathi::clamp2(0, key, 127);
 
@@ -279,8 +282,10 @@ SequenceTrack::ParseResult MmlParser::parse(SequenceTrack* track, bool doNoteOn)
             {
             case MmlCommand::MML_ALLOC_TRACK:
                 (void)Read16(&trackParam.currentAddr);
-                SEAD_ASSERT_MSG(false, "seq: must use alloctrack in startup code");
-                break;
+                //SEAD_ASSERT_MSG(false, "seq: must use alloctrack in startup code");
+                //break;
+                SEAD_WARNING("seq: must use alloctrack in startup code");
+                return SequenceTrack::PARSE_RESULT_FINISH;
 
             case MmlCommand::MML_FIN:
                 if (doExecCommand)
@@ -385,8 +390,10 @@ SequenceTrack::ParseResult MmlParser::parse(SequenceTrack* track, bool doNoteOn)
 void MmlParser::commandProc(SequenceTrack* track, u32 command, s32 commandArg1, s32 commandArg2) const
 {
     SEAD_ASSERT(track);
+
     SequenceSoundPlayer* player = track->getSequenceSoundPlayer();
     SEAD_ASSERT(player);
+
     SequenceTrack::ParserTrackParam& trackParam = track->getParserTrackParam();
     SequenceSoundPlayer::ParserPlayerParam& playerParam = player->getParserPlayerParam();
 
@@ -632,19 +639,18 @@ void MmlParser::commandProc(SequenceTrack* track, u32 command, s32 commandArg1, 
             break;
 
         case MmlCommand::MML_PRINTVAR:
-        /*
-            if (mPrintVarEnabledFlag) {
-                const vs16* const varPtr = GetVariablePtr(player, track, commandArg1);
-                NW_NULL_ASSERT(varPtr);
-                NW_LOG("#%08x[%d]: printvar %sVAR_%d(%d) = %d\n",
-                    player,
-                    track->GetPlayerTrackNo(),
-                    (commandArg1 >= 32)? "T": (commandArg1 >= 16)? "G": "",
-                    (commandArg1 >= 32)? commandArg1-32: (commandArg1 >= 16)? commandArg1-16: commandArg1,
-                    commandArg1,
-                    *varPtr);
-            }
-        */
+            // TODO: Why is this commented ?
+            // if (mPrintVarEnabledFlag) {
+            //     const vs16* const varPtr = GetVariablePtr(player, track, commandArg1);
+            //     NW_NULL_ASSERT(varPtr);
+            //     NW_LOG("#%08x[%d]: printvar %sVAR_%d(%d) = %d\n",
+            //         player,
+            //         track->GetPlayerTrackNo(),
+            //         (commandArg1 >= 32)? "T": (commandArg1 >= 16)? "G": "",
+            //         (commandArg1 >= 32)? commandArg1-32: (commandArg1 >= 16)? commandArg1-16: commandArg1,
+            //         commandArg1,
+            //         *varPtr);
+            // }
             break;
 
         case MmlCommand::MML_OPEN_TRACK:
@@ -1115,5 +1121,29 @@ volatile s16* MmlParser::GetVariablePtr(SequenceSoundPlayer* player, SequenceTra
     else
     {
         return NULL;
+    }
+}
+
+u32 MmlParser::ParseAllocTrack( const void* baseAddress, u32 seqOffset, u32* allocTrack )
+{
+    SEAD_ASSERT( baseAddress );
+    SEAD_ASSERT( allocTrack );
+
+    const u8* ptr = static_cast<const u8*>( sead::PtrUtil::addOffset( baseAddress, seqOffset ) );
+    if ( *ptr != MmlCommand::MML_ALLOC_TRACK )
+    {
+        *allocTrack = (1 << 0);
+        return seqOffset;
+    }
+    else
+    {
+        ++ptr;
+        u32 tracks = *ptr;
+        tracks <<= 8;
+        ++ptr;
+        tracks |= *ptr;
+        tracks |= (1 << 0);
+        *allocTrack = tracks;
+        return seqOffset + 3;
     }
 }

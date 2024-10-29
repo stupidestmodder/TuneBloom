@@ -5,6 +5,8 @@
 
 #include "snd/snd_SequenceSoundFileReader.h"
 
+#include <bfsar/SequenceFile.h>
+
 MmlParser sMmlParser;
 
 static const u32 INTERVAL_MSEC_DENOMINATOR = 0x10000;
@@ -70,7 +72,7 @@ void SequenceSoundPlayer::setup(u32 allocTracks, NoteOnCallback* callback)
     mParserParam.callback = callback;
 
     u32 trackBitMask = allocTracks;
-    for (u32 trackNo = 0; trackBitMask != 0; trackNo++, trackBitMask >>= 1)
+    for (u32 trackNo = 0; trackNo < cTrackNumPerPlayer && trackBitMask != 0; trackNo++, trackBitMask >>= 1)
     {
         if ((trackBitMask & 1) == 0)
             continue;
@@ -151,6 +153,48 @@ void SequenceSoundPlayer::prepare(const void* seqFile, s32 seqOffset, const Bank
     mActiveFlag = true;
 
     mUpdateType = updateType;
+}
+
+void SequenceSoundPlayer::prepare(const SequenceFile& seqFile, s32 seqOffset, const BankFile** bankFiles, snd::UpdateType updateType)
+{
+    if (mActiveFlag)
+    {
+        finishPlayer();
+    }
+
+    if (!seqFile.isValid())
+    {
+        finishPlayer();
+        return;
+    }
+
+    SequenceTrack* seqTrack = getPlayerTrack(0);
+    if (!seqTrack)
+    {
+        //finalize();
+        return;
+    }
+
+    {
+        const void* seqData = seqFile.getSeqBytes();
+        SEAD_ASSERT(seqData);
+
+        seqTrack->setSeqData(seqData, seqOffset);
+        seqTrack->open();
+    }
+
+    for (s32 i = 0; i < nw::snd::SoundArchive::SEQ_BANK_MAX; i++)
+    {
+        mBankFile[i] = bankFiles[i];
+    }
+
+    snd::internal::driver::SoundThread::instance()->registerPlayerCallback(this);
+    mIsRegisterPlayerCallback = true;
+    mActiveFlag = true;
+
+    mUpdateType = updateType;
+
+    mPlayingFile = &seqFile;
 }
 
 void SequenceSoundPlayer::pause(bool flag)

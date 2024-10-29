@@ -30,8 +30,6 @@ extern bool* sSoundInGroup;
 
 extern const SoundDataMgr* sSoundDataMgr;
 
-extern const nw::snd::internal::SoundArchiveFile::SoundInfo* sCurrentSoundInfo;
-
 extern u32 sSampleRate;
 extern u32 sSampleCount;
 
@@ -58,6 +56,16 @@ public:
         , mFileRef(this)
     {
         mFileRef.attach(file);
+
+        file->onOpenFileWindow();
+    }
+
+    ~FileWindow() override
+    {
+        if (mFileRef.isAttached())
+        {
+            mFileRef.getItem()->onCloseFileWindow();
+        }
     }
 
     bool isOpen() const
@@ -96,10 +104,10 @@ void SaveFileAs();
 void CloseFile();
 void LoadBfgrp();
 
-void PlaySound(const nw::snd::internal::SoundArchiveFile::SoundInfo* soundInfo);
 void PlaySound(const Sound* sound);
 void PlayWaveFile(const WaveFile& wave, s32 channel = -1, const Sound* sound = nullptr);
 void PlayBankNote(u8 key, u8 velocity, const BankFile::VelocityRegion& velocityRegion);
+bool PlaySeqFile(const SequenceFile& seqFile, const sead::SafeString& startLabel, const Bank** bankArray, u8 volume);
 void StopAllSoundPlayers(bool stop = false);
 void StopAllSoundPlayersWithoutLock(bool stop = false);
 

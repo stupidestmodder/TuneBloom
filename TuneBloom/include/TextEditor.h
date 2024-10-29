@@ -125,10 +125,26 @@ public:
 		std::string mDeclaration;
 	};
 
+	struct Marker
+	{
+		// Marker()
+		// 	: mDetail()
+		// 	, mColor(IM_COL32(0, 0, 0.5f * 255, 255))
+		// 	, mIsError(true)
+		// 	, mShowDetail(true)
+		// {
+		// }
+
+		std::string mDetail;
+		ImU32 mColor;
+		bool mIsError;
+		bool mShowDetail;
+	};
+
 	typedef std::string String;
 	typedef std::unordered_map<std::string, Identifier> Identifiers;
 	typedef std::unordered_set<std::string> Keywords;
-	typedef std::map<int, std::string> ErrorMarkers;
+	typedef std::map<int, Marker> Markers;
 	typedef std::unordered_set<int> Breakpoints;
 	typedef std::array<ImU32, (unsigned)PaletteIndex::Max> Palette;
 	typedef uint8_t Char;
@@ -191,7 +207,7 @@ public:
 	const Palette& GetPalette() const { return mPaletteBase; }
 	void SetPalette(const Palette& aValue);
 
-	void SetErrorMarkers(const ErrorMarkers& aMarkers) { mErrorMarkers = aMarkers; }
+	void SetMarkers(const Markers& aMarkers) { mMarkers = aMarkers; }
 	void SetBreakpoints(const Breakpoints& aMarkers) { mBreakpoints = aMarkers; }
 
 	void Render(const char* aTitle, const ImVec2& aSize = ImVec2(), bool aBorder = false);
@@ -266,6 +282,8 @@ public:
 	static const Palette& GetLightPalette();
 	static const Palette& GetRetroBluePalette();
 
+	void EnsureCursorVisible();
+
 private:
 	typedef std::vector<std::pair<std::regex, PaletteIndex>> RegexList;
 
@@ -316,7 +334,6 @@ private:
 	void ColorizeRange(int aFromLine = 0, int aToLine = 0);
 	void ColorizeInternal();
 	float TextDistanceToLineStart(const Coordinates& aFrom) const;
-	void EnsureCursorVisible();
 	int GetPageSize() const;
 	std::string GetText(const Coordinates& aStart, const Coordinates& aEnd) const;
 	Coordinates GetActualCursorCoordinates() const;
@@ -379,7 +396,7 @@ private:
 
 	bool mCheckComments;
 	Breakpoints mBreakpoints;
-	ErrorMarkers mErrorMarkers;
+	Markers mMarkers;
 	ImVec2 mCharAdvance;
 	Coordinates mInteractiveStart, mInteractiveEnd;
 	std::string mLineBuffer;

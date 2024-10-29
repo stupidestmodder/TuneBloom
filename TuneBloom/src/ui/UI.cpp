@@ -762,7 +762,26 @@ void DrawFileUI(ImGuiID dockspaceId)
 
         ImGui::SetNextWindowDockID(dockspaceId, ImGuiCond_Appearing);
 
-        if (ImGui::Begin(sead::FormatFixedSafeString<512>(ICON_LC_FILE " %s###%u", file->getFormattedName().cstr(), file).cstr(), window->getOpenPtr()))
+        bool dirty = false;
+        ImGuiWindowFlags flags = ImGuiWindowFlags_None;
+        if (file->getItemType() == Item::ItemType::SequenceFile)
+        {
+            SequenceFile* seq = static_cast<SequenceFile*>(file);
+            flags = ImGuiWindowFlags_MenuBar;
+
+            dirty = seq->isDirty();
+            flags |= dirty ? ImGuiWindowFlags_UnsavedDocument : 0;
+        }
+
+        bool visible = ImGui::Begin(sead::FormatFixedSafeString<512>(ICON_LC_FILE " %s###%u", file->getFormattedName().cstr(), file).cstr(), window->getOpenPtr(), flags);
+
+        if (!window->isOpen() && dirty)
+        {
+            *window->getOpenPtr() = true;
+            // TODO: Open Popup
+        }
+
+        if (visible)
         {
             switch (file->getItemType())
             {
@@ -770,6 +789,13 @@ void DrawFileUI(ImGuiID dockspaceId)
                 {
                     BankFile* bank = static_cast<BankFile*>(file);
                     bank->drawFileUI();
+                    break;
+                }
+
+                case Item::ItemType::SequenceFile:
+                {
+                    SequenceFile* seq = static_cast<SequenceFile*>(file);
+                    seq->drawFileUI();
                     break;
                 }
             }
@@ -1195,9 +1221,44 @@ void DrawWaveFilesUI()
     }
 }
 
+FileWindow* OpenFileWindow(Item* item)
+{
+    sead::FormatFixedSafeString<512> windowName("###%u", item);
+
+    ImGuiWindow* imguiWindow = ImGui::FindWindowByName(windowName.cstr());
+    if (!imguiWindow || !imguiWindow->WasActive)
+    {
+        FileWindow* window = new FileWindow(item);
+
+        sFileWindows.pushBack(window);
+
+        return window;
+    }
+    else if (imguiWindow)
+    {
+        ImGui::SetWindowFocus(windowName.cstr());
+
+        return nullptr;
+    }
+}
+
+const char* SequenceFileNamePrefixFunc(Item* item)
+{
+    SequenceFile* seq = static_cast<SequenceFile*>(item);
+
+    if (ImGui::Button(sead::FormatFixedSafeString<32>(ICON_LC_FILE_PEN "###%u", seq->getId()).cstr()))
+    {
+        OpenFileWindow(seq);
+    }
+
+    ImGui::SameLine();
+
+    return nullptr;
+}
+
 void DrawSequenceFilesUI()
 {
-    DrawAllItemsUI("Sequence File", sBfsar.getSequenceFileList());
+    DrawAllItemsUI("Sequence File", sBfsar.getSequenceFileList(), nullptr, &SequenceFileNamePrefixFunc);
 }
 
 const char* BankFileNamePrefixFunc(Item* item)
@@ -1206,19 +1267,7 @@ const char* BankFileNamePrefixFunc(Item* item)
 
     if (ImGui::Button(sead::FormatFixedSafeString<32>(ICON_LC_FILE_PEN "###%u", bank->getId()).cstr()))
     {
-        sead::FormatFixedSafeString<512> windowName("###%u", bank);
-
-        ImGuiWindow* imguiWindow = ImGui::FindWindowByName(windowName.cstr());
-        if (!imguiWindow || !imguiWindow->WasActive)
-        {
-            FileWindow* window = new FileWindow(bank);
-
-            sFileWindows.pushBack(window);
-        }
-        else if (imguiWindow)
-        {
-           ImGui::SetWindowFocus(windowName.cstr());
-        }
+        OpenFileWindow(bank);
     }
 
     ImGui::SameLine();

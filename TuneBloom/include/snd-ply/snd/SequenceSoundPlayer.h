@@ -12,6 +12,7 @@
 
 #include <bfsar/BankFile.h>
 
+class SequenceFile;
 class SequenceSoundPlayer;
 
 struct NoteOnInfo
@@ -94,6 +95,7 @@ public:
     void setup(u32 allocTracks, NoteOnCallback* callback);
     void prepare(const void* seqFile, s32 seqOffset, const void** bankFiles, const void** warcFiles, const bool* warcIsIndividuals, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
     void prepare(const void* seqFile, s32 seqOffset, const BankFile** bankFiles, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
+    void prepare(const SequenceFile& seqFile, s32 seqOffset, const BankFile** bankFiles, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
 
     void pause(bool flag) override;
 
@@ -107,6 +109,11 @@ public:
     snd::UpdateType getUpdateType() const
     {
         return mUpdateType;
+    }
+
+    bool isPlayingFile(const SequenceFile& file) const
+    {
+        return &file == mPlayingFile;
     }
 
     SequenceTrack* getPlayerTrack(s32 trackNo);
@@ -238,4 +245,6 @@ protected:
     bool mIsRegisterPlayerCallback;
 
     snd::UpdateType mUpdateType;
+
+    const SequenceFile* mPlayingFile;
 };

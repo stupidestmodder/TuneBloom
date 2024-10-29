@@ -23,6 +23,7 @@ public:
     bool contains(const Key& key) const        { return theMap.contains(key); }
     const auto find(const Key& key) const      { return theMap.find(key); }
     bool isInMap(const auto& it) const         { return it != theMap.end(); }
+    void clear()                               { theVector.clear(); theMap.clear(); }
 
 private:
     std::vector<T> theVector;

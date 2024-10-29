@@ -6,14 +6,43 @@
 
 class MmlCommandBase
 {
+    SEAD_RTTI_BASE(MmlCommandBase);
+
 public:
     MmlCommandBase(bool conditional = false)
         : mConditional(conditional)
     {
     }
 
+    virtual ~MmlCommandBase()
+    {
+    }
+
     virtual void init()
     {
+    }
+
+    bool setArg(u32 i, SeqArgBase* arg)
+    {
+        switch (i)
+        {
+            case 0:
+                return setArg1(arg);
+            case 1:
+                return setArg2(arg);
+        }
+
+        return false;
+    }
+
+    virtual bool setArg1(SeqArgBase* arg)
+    {
+        return false;
+    }
+
+    virtual bool setArg2(SeqArgBase* arg)
+    {
+        return false;
     }
 
     virtual std::vector<u8> encode() = 0
@@ -55,6 +84,8 @@ public:
 
 class MmlCommandArgs0 : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlCommandArgs0, MmlCommandBase);
+
 public:
     MmlCommandArgs0(bool conditional = false)
         : MmlCommandBase(conditional)
@@ -86,21 +117,47 @@ public:
 template <typename ArgDefaultType>
 class MmlCommandArgs1 : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlCommandArgs1, MmlCommandBase);
+
 public:
-    MmlCommandArgs1(SeqArgBase* arg, bool conditional = false)
+    MmlCommandArgs1(SeqArgBase* arg = nullptr, bool conditional = false)
         : MmlCommandBase(conditional)
     {
-        const ArgDefaultType* argDefaultType = sead::DynamicCast<ArgDefaultType>(arg);
+        mArg = arg;
+    }
+
+    ~MmlCommandArgs1() override
+    {
+        if (mArg)
+        {
+            delete mArg;
+            mArg = nullptr;
+        }
+    }
+
+    void init() override
+    {
+        const ArgDefaultType* argDefaultType = sead::DynamicCast<ArgDefaultType>(mArg);
         if (argDefaultType)
         {
-            //SEAD_ASSERT(validateArgValueDefaultType_(argDefaultType));
+            SEAD_ASSERT(validateArgValueDefaultType_(argDefaultType));
         }
         else
         {
-            SEAD_ASSERT(sead::IsDerivedTypes<SeqArgRandom>(arg) || sead::IsDerivedTypes<SeqArgVariable>(arg));
+            SEAD_ASSERT(sead::IsDerivedTypes<SeqArgRandom>(mArg) || sead::IsDerivedTypes<SeqArgVariable>(mArg));
+        }
+    }
+
+    bool setArg1(SeqArgBase* arg) override
+    {
+        if (mArg)
+        {
+            delete mArg;
+            mArg = nullptr;
         }
 
         mArg = arg;
+        return true;
     }
 
     virtual bool validateArgValueDefaultType_(const ArgDefaultType* arg) const = 0;
@@ -166,16 +223,48 @@ public:
 
 class MmlCommandBoolArg : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlCommandBoolArg, MmlCommandBase);
+
 public:
-    MmlCommandBoolArg(SeqArgBase* arg, bool conditional = false)
+    MmlCommandBoolArg(SeqArgBase* arg = nullptr, bool conditional = false)
         : MmlCommandBase(conditional)
     {
-        SeqArg8* argDefaultType = sead::DynamicCast<SeqArg8>(arg);
+        mArg = arg;
+    }
+
+    ~MmlCommandBoolArg() override
+    {
+        if (mArg)
+        {
+            delete mArg;
+            mArg = nullptr;
+        }
+    }
+
+    void init() override
+    {
+        SeqArg8* argDefaultType = sead::DynamicCast<SeqArg8>(mArg);
         SEAD_ASSERT(argDefaultType);
 
         SEAD_ASSERT(validateArgValue_(argDefaultType));
+    }
+
+    bool setArg1(SeqArgBase* arg) override
+    {
+        SeqArg8* argDefaultType = sead::DynamicCast<SeqArg8>(arg);
+        if (!argDefaultType)
+        {
+            return false;
+        }
+
+        if (mArg)
+        {
+            delete mArg;
+            mArg = nullptr;
+        }
 
         mArg = argDefaultType;
+        return true;
     }
 
     virtual bool validateArgValue_(const SeqArg8* arg) const
@@ -193,13 +282,14 @@ public:
 
     virtual std::vector<u8> encode()
     {
-        SEAD_ASSERT(mArg);
-        SEAD_ASSERT(validateArgValue_(mArg));
+        SeqArg8* arg = sead::DynamicCast<SeqArg8>(mArg);
+        SEAD_ASSERT(arg);
+        SEAD_ASSERT(validateArgValue_(arg));
 
         std::vector<u8> ret = MmlCommandBase::encode();
 
         ret.push_back(getCommand_());
-        const auto& argBytes = mArg->encode();
+        const auto& argBytes = arg->encode();
         ret.insert(ret.end(), argBytes.begin(), argBytes.end());
 
         return ret;
@@ -212,54 +302,97 @@ public:
 
     std::string toString() const override
     {
-        SEAD_ASSERT(mArg);
-        SEAD_ASSERT(validateArgValue_(mArg));
+        SeqArg8* arg = sead::DynamicCast<SeqArg8>(mArg);
+        SEAD_ASSERT(arg);
+        SEAD_ASSERT(validateArgValue_(arg));
 
         std::string cmd = getCommandString_();
-        cmd += isTrue_(mArg) ? "on" : "off";
+        cmd += isTrue_(arg) ? "on" : "off";
 
         return toString_(cmd);
     }
 
-    SeqArg8* mArg;
+    SeqArgBase* mArg;
 };
 
 template <typename Arg1DefaultType>
 class MmlCommandArgs2 : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlCommandArgs2, MmlCommandBase);
+
 public:
-    MmlCommandArgs2(SeqArgBase* arg1, SeqArgBase* arg2 = nullptr, bool conditional = false)
+    MmlCommandArgs2(SeqArgBase* arg1 = nullptr, SeqArgBase* arg2 = nullptr, bool conditional = false)
         : MmlCommandBase(conditional)
     {
-        const Arg1DefaultType* arg1DefaultType = sead::DynamicCast<Arg1DefaultType>(arg1);
+        mArg1 = arg1;
+        mArg2 = arg2;
+    }
+
+    ~MmlCommandArgs2() override
+    {
+        if (mArg1)
+        {
+            delete mArg1;
+            mArg1 = nullptr;
+        }
+
+        if (mArg2)
+        {
+            delete mArg2;
+            mArg2 = nullptr;
+        }
+    }
+
+    void init() override
+    {
+        const Arg1DefaultType* arg1DefaultType = sead::DynamicCast<Arg1DefaultType>(mArg1);
         if (arg1DefaultType)
         {
-            //SEAD_ASSERT(validateArg1ValueDefaultType_(arg1DefaultType));
+            SEAD_ASSERT(validateArg1ValueDefaultType_(arg1DefaultType));
         }
         else
         {
-            SEAD_ASSERT(sead::IsDerivedTypes<SeqArgRandom>(arg1) || sead::IsDerivedTypes<SeqArgVariable>(arg1));
+            SEAD_ASSERT(sead::IsDerivedTypes<SeqArgRandom>(mArg1) || sead::IsDerivedTypes<SeqArgVariable>(mArg1));
         }
 
-        mArg1 = arg1;
-
-        if (!arg2)
+        if (!mArg2)
         {
-            mArg2 = nullptr;
             return;
         }
 
-        const SeqArg16* arg2DefaultType = sead::DynamicCast<SeqArg16>(arg2);
+        const SeqArg16* arg2DefaultType = sead::DynamicCast<SeqArg16>(mArg2);
         if (arg2DefaultType)
         {
             SEAD_ASSERT(arg2DefaultType->mHasSign);
         }
         else
         {
-            SEAD_ASSERT(sead::IsDerivedTypes<SeqArgRandom>(arg2) || sead::IsDerivedTypes<SeqArgVariable>(arg2));
+            SEAD_ASSERT(sead::IsDerivedTypes<SeqArgRandom>(mArg2) || sead::IsDerivedTypes<SeqArgVariable>(mArg2));
+        }
+    }
+
+    bool setArg1(SeqArgBase* arg) override
+    {
+        if (mArg1)
+        {
+            delete mArg1;
+            mArg1 = nullptr;
         }
 
-        mArg2 = arg2;
+        mArg1 = arg;
+        return true;
+    }
+
+    bool setArg2(SeqArgBase* arg) override
+    {
+        if (mArg2)
+        {
+            delete mArg2;
+            mArg2 = nullptr;
+        }
+
+        mArg2 = arg;
+        return true;
     }
 
     virtual bool validateArg1ValueDefaultType_(const Arg1DefaultType* arg1) const = 0;
@@ -382,6 +515,8 @@ enum class MmlExCommandArgType
 
 class MmlExCommandBase : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlExCommandBase, MmlCommandBase);
+
     MmlExCommandArgType getArgType_() const
     {
         switch (getCommand_() & 0xF0)
@@ -404,11 +539,26 @@ class MmlExCommandBase : public MmlCommandBase
     }
 
 public:
-    MmlExCommandBase(SeqArgBase* arg1, SeqArgBase* arg2 = nullptr, bool conditional = false)
+    MmlExCommandBase(SeqArgBase* arg1 = nullptr, SeqArgBase* arg2 = nullptr, bool conditional = false)
         : MmlCommandBase(conditional)
     {
         mArg1 = arg1;
         mArg2 = arg2;
+    }
+
+    ~MmlExCommandBase() override
+    {
+        if (mArg1)
+        {
+            delete mArg1;
+            mArg1 = nullptr;
+        }
+
+        if (mArg2)
+        {
+            delete mArg2;
+            mArg2 = nullptr;
+        }
     }
 
     void init() override
@@ -462,6 +612,30 @@ public:
                 break;
             }
         }
+    }
+
+    bool setArg1(SeqArgBase* arg) override
+    {
+        if (mArg1)
+        {
+            delete mArg1;
+            mArg1 = nullptr;
+        }
+
+        mArg1 = arg;
+        return true;
+    }
+
+    bool setArg2(SeqArgBase* arg) override
+    {
+        if (mArg2)
+        {
+            delete mArg2;
+            mArg2 = nullptr;
+        }
+
+        mArg2 = arg;
+        return true;
     }
 
     virtual MmlCommand::MmlEx getCommand_() const = 0;
@@ -611,21 +785,49 @@ public:
 
 class MmlCommandNote : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlCommandNote, MmlCommandBase);
+
 public:
     static const u32 sKeysNum = 128;
 
-    static const char* const sKeys[sKeysNum];
+    static const char* sKeys[sKeysNum];
 
 public:
-    MmlCommandNote(u32 key, u8 velocity, SeqArgBase* length, bool conditional = false)
+    MmlCommandNote(u32 key = 0, u8 velocity = 0, SeqArgBase* length = nullptr, bool conditional = false)
         : MmlCommandBase(conditional)
     {
         SEAD_ASSERT(0 <= key && key <= 127);
-        SEAD_ASSERT(sead::IsDerivedTypes<SeqArgVMIDI>(length) || sead::IsDerivedTypes<SeqArgRandom>(length) || sead::IsDerivedTypes<SeqArgVariable>(length));
 
         mKey = (u8)key;
         mVelocity = velocity;
         mLength = length;
+    }
+
+    ~MmlCommandNote() override
+    {
+        if (mLength)
+        {
+            delete mLength;
+            mLength = nullptr;
+        }
+    }
+
+    void init() override
+    {
+        SEAD_ASSERT(0 <= mKey && mKey <= 127);
+        SEAD_ASSERT(sead::IsDerivedTypes<SeqArgVMIDI>(mLength) || sead::IsDerivedTypes<SeqArgRandom>(mLength) || sead::IsDerivedTypes<SeqArgVariable>(mLength));
+    }
+
+    bool setArg2(SeqArgBase* arg) override
+    {
+        if (mLength)
+        {
+            delete mLength;
+            mLength = nullptr;
+        }
+
+        mLength = arg;
+        return true;
     }
 
     std::vector<u8> encode() override
@@ -1312,12 +1514,41 @@ public:
 
 class MmlCommandAllocTrack : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlCommandAllocTrack, MmlCommandBase);
+
 public:
-    MmlCommandAllocTrack(SeqArgBase* arg)
-        : MmlCommandBase(false)
+    MmlCommandAllocTrack(SeqArgBase* arg = nullptr, bool conditional = false)
+        : MmlCommandBase(conditional)
     {
+        mArg = arg;
+    }
+
+    ~MmlCommandAllocTrack() override
+    {
+        if (mArg)
+        {
+            delete mArg;
+            mArg = nullptr;
+        }
+    }
+
+    void init() override
+    {
+        SeqArg16* arg = sead::DynamicCast<SeqArg16>(mArg);
+        SEAD_ASSERT(arg);
         SEAD_ASSERT(validateArg_(arg));
-        mArg = sead::DynamicCast<SeqArg16>(arg);
+    }
+
+    bool setArg1(SeqArgBase* arg) override
+    {
+        if (mArg)
+        {
+            delete mArg;
+            mArg = nullptr;
+        }
+
+        mArg = arg;
+        return true;
     }
 
     bool validateArg_(const SeqArgBase* arg) const
@@ -1342,12 +1573,15 @@ public:
 
     std::vector<std::string> getArgs_() const override
     {
+        SeqArg16* arg = sead::DynamicCast<SeqArg16>(mArg);
+        SEAD_ASSERT(arg);
+
         std::string ret;
 
         std::vector<std::string> args;
         for (u32 i = 0; i < 16; i++)
         {
-            if ((mArg->mValue >> i) & 1)
+            if ((arg->mValue >> i) & 1)
                 args.push_back("TRACK_" + std::to_string(i));
         }
 
@@ -1369,7 +1603,7 @@ public:
         return toString_("alloctrack");
     }
 
-    SeqArg16* mArg;
+    SeqArgBase* mArg;
 };
 
 struct LabelObj
@@ -1377,7 +1611,6 @@ struct LabelObj
     LabelObj()
     {
         mOffset = 0;
-        mLabel = nullptr;
     }
 
     LabelObj(u32 offset, const char* label)
@@ -1397,19 +1630,24 @@ struct LabelObj
     }
 
     u32 mOffset;
-    const char* mLabel;
+    std::string mLabel;
 };
 
 class MmlCommandOpenTrack : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlCommandOpenTrack, MmlCommandBase);
+
 public:
-    MmlCommandOpenTrack(u8 trackNo, LabelObj labelObj, bool conditional = false)
+    MmlCommandOpenTrack(u8 trackNo = 0, LabelObj labelObj = LabelObj(), bool conditional = false)
         : MmlCommandBase(conditional)
     {
-        SEAD_ASSERT(0 <= trackNo && trackNo < 16);
-
         mTrackNo = trackNo;
         mLabelObj = labelObj;
+    }
+
+    void init() override
+    {
+        SEAD_ASSERT(0 <= mTrackNo && mTrackNo < 16);
     }
 
     std::vector<u8> encode() override
@@ -1445,8 +1683,10 @@ public:
 
 class MmlCommandJump : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlCommandJump, MmlCommandBase);
+
 public:
-    MmlCommandJump(LabelObj labelObj, bool conditional = false)
+    MmlCommandJump(LabelObj labelObj = LabelObj(), bool conditional = false)
         : MmlCommandBase(conditional)
     {
         mLabelObj = labelObj;
@@ -1479,8 +1719,10 @@ public:
 
 class MmlCommandCall : public MmlCommandBase
 {
+    SEAD_RTTI_OVERRIDE(MmlCommandCall, MmlCommandBase);
+
 public:
-    MmlCommandCall(LabelObj labelObj, bool conditional = false)
+    MmlCommandCall(LabelObj labelObj = LabelObj(), bool conditional = false)
         : MmlCommandBase(conditional)
     {
         mLabelObj = labelObj;

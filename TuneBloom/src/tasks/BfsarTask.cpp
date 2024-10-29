@@ -228,6 +228,8 @@ void BfsarTask::enter()
 
 void BfsarTask::exit()
 {
+    sead::CurrentHeapSetter chs(sead::HeapMgr::getUnboundHeap());
+
     CloseFile();
 
     snd::SoundSystem::finalize();

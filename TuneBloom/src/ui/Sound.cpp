@@ -1,6 +1,6 @@
 #include <ui/UI.h>
 
-extern void ParseSequenceFile(u32 fileId);
+#include <imgui/imgui_custom.h>
 
 void DrawSoundPropertiesUI()
 {
@@ -319,33 +319,33 @@ void DrawSoundPropertiesUI()
                 //ImGui::Separator();
             }
 
-            {
-                u32 allocateTrackFlags = seqSoundInfo.getAllocateTrackFlags();
-                //if (ImGui::InputScalar("Allocate Track Flags", ImGuiDataType_U32, &allocateTrackFlags, &cStepU32))
-                //{
-                //    seqSoundInfo.setAllocateTrackFlags(allocateTrackFlags);
-                //}
+            // {
+            //     u32 allocateTrackFlags = seqSoundInfo.getAllocateTrackFlags();
+            //     //if (ImGui::InputScalar("Allocate Track Flags", ImGuiDataType_U32, &allocateTrackFlags, &cStepU32))
+            //     //{
+            //     //    seqSoundInfo.setAllocateTrackFlags(allocateTrackFlags);
+            //     //}
 
-                CenteredTextX("Allocate Tracks");
+            //     CenteredTextX("Allocate Tracks");
 
-                for (u32 i = 0; i < 16; i++)
-                {
-                    if (ImGui::CheckboxFlagsT<u32>(sead::FormatFixedSafeString<8>("###%u", i).cstr(), &allocateTrackFlags, 1 << i))
-                    {
-                        seqSoundInfo.setAllocateTrackFlags(allocateTrackFlags);
-                    }
+            //     for (u32 i = 0; i < 16; i++)
+            //     {
+            //         if (ImGui::CheckboxFlagsT<u32>(sead::FormatFixedSafeString<8>("###%u", i).cstr(), &allocateTrackFlags, 1 << i))
+            //         {
+            //             seqSoundInfo.setAllocateTrackFlags(allocateTrackFlags);
+            //         }
 
-                    ImGui::SameLine();
-                    f32 cursorPos = ImGui::GetCursorPosX();
-                    ImGui::Text("%u", i);
+            //         ImGui::SameLine();
+            //         f32 cursorPos = ImGui::GetCursorPosX();
+            //         ImGui::Text("%u", i);
 
-                    if ((i + 1) % 8 != 0)
-                    {
-                        ImGui::SameLine();
-                        ImGui::SetCursorPosX(cursorPos + 30.0f);
-                    }
-                }
-            }
+            //         if ((i + 1) % 8 != 0)
+            //         {
+            //             ImGui::SameLine();
+            //             ImGui::SetCursorPosX(cursorPos + 30.0f);
+            //         }
+            //     }
+            // }
 
             {
                 bool enableStartOffset = seqSoundInfo.isEnableStartOffset();
@@ -358,11 +358,33 @@ void DrawSoundPropertiesUI()
                     ImGui::BeginDisabled();
 
                 {
-                    u32 startOffset = seqSoundInfo.getStartOffset();
-                    if (ImGui::InputScalar("Start Offset", ImGuiDataType_U32, &startOffset, &cStepU32))
+                    const char** labels = nullptr;
+                    u32 labelCount = 0;
+
+                    Item* seqFile = seqSoundInfo.getSequenceFileRef().getItem();
+                    if (seqFile)
                     {
-                        seqSoundInfo.setStartOffset(startOffset);
+                        SequenceFile* seq = static_cast<SequenceFile*>(seqFile);
+                        const std::vector<std::string>& labelsVec = seq->getLabels();
+
+                        labelCount = labelsVec.size();
+                        if (labelCount > 0)
+                        {
+                            labels = new const char*[labelCount];
+                            for (u32 i = 0; i < labelCount; i++)
+                            {
+                                labels[i] = labelsVec[i].c_str();
+                            }
+                        }
                     }
+
+                    sead::FixedSafeString<128> startLabel = enableStartOffset ? seqSoundInfo.getStartLabel() : sead::FixedSafeString<128>();
+                    if (ImGui::InputTextCombo("Start Label", startLabel.getBuffer(), startLabel.getBufferSize(), labels, labelCount))
+                    {
+                        seqSoundInfo.getStartLabel() = startLabel;
+                    }
+
+                    delete[] labels;
                 }
 
                 if (!enableStartOffset)
@@ -822,19 +844,6 @@ void DrawSoundPropertiesUI()
             ImGui::EndDisabled();
 
         ImGui::EndTabBar();
-    }
-
-    if (false)
-    {
-        if (ImGui::Button("Parse Sequence File"))
-        {
-            if (sound->getSoundType() != Sound::SoundType::Seq)
-                return;
-
-            SEAD_PRINT("FSEQ for sound: %s\n", sound->getNameOrNull().cstr());
-
-            //ParseSequenceFile(sound->getFileId());
-        }
     }
 }
 

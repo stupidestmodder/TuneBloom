@@ -15,12 +15,6 @@
 #include <filedevice/seadPath.h>
 #include <heap/seadExpHeap.h>
 
-#include <TextEditor.h>
-
-#include <map>
-
-extern void ParseSequenceFile(u32 fileId);
-
 // Players
 
 InstanciateItemCallback CreatePlayerFunc(bool clear)
@@ -81,16 +75,10 @@ BasicSoundPlayer* sCurrentSoundPlayer = nullptr;
 bool sLoop = true;
 static f32 sVolume = 0.5f;
 
-const nw::snd::internal::SoundArchiveFile::SoundInfo* sCurrentSoundInfo = nullptr;
+const Sound* sLastPlayedSound = nullptr; // TODO: Handle sound deletion
 
 u32 sSampleRate = 0;
 u32 sSampleCount = 0;
-
-TextEditor* sTextEditor = nullptr;
-
-std::map<u32, u32>* sOffsetToLine = nullptr;
-
-static u32 sCurrentFileId = 0xFFFFFFFF;
 
 static s16 sGlobalVars[SequenceSoundPlayer::cGlobalVariableNum] = { -1 };
 static s16 sPlayerVars[SequenceSoundPlayer::cPlayerVariableNum] = { -1 };
@@ -125,63 +113,86 @@ void DrawPlayerUI()
         ImGui::End();
     }
 
-    //if (false)
-    {
-        static TextEditor sTextEditorInstance;
-        sTextEditor = &sTextEditorInstance;
-    }
+    // //if (false)
+    // {
+    //     if (ImGui::Begin("FSEQ"))
+    //     {
+    //         static bool sFollowSeq = true;
+    //         static u32 sFollowTrack = 0;
 
-    //if (false)
-    {
-        static std::map<u32, u32> sOffsetToLineInstance;
-        sOffsetToLine = &sOffsetToLineInstance;
-    }
+    //         //if (sSequencePlayer.isActive())
+    //         {
+    //             // s32 wait = 0;
+    //             // s32 waitAmount = 1;
 
-    static u32 sTrack0Offset = 0;
+    //             // const SequenceTrack* track = sSequencePlayer.getPlayerTrack(0);
+    //             // track = &sSequencePlayer.getTrack_(0);
+    //             // if (track)
+    //             // {
+    //             //     sTrack0Offset = intptr_t(track->getParserTrackParam().currentCmdAddr) - intptr_t(track->getParserTrackParam().baseAddr);
+    //             //     wait = track->getParserTrackParam().wait;
+    //             //     waitAmount = track->getParserTrackParam().waitAmount;
+    //             // }
 
-    s32 line = 0;
+    //             //if (sOffsetToLine)
+    //             //    line = (*sOffsetToLine)[sTrack0Offset];
 
-    if (false)
-    {
-        if (ImGui::Begin("FSEQ"))
-        {
-            //if (sSequencePlayer.isActive())
-            {
-                s32 wait = 0;
-                s32 waitAmount = 1;
+    //             //f32 progress = static_cast<f32>(wait) / static_cast<f32>(waitAmount);
 
-                const SequenceTrack* track = sSequencePlayer.getPlayerTrack(0);
-                track = &sSequencePlayer.getTrack_(0);
-                if (track)
-                {
-                    sTrack0Offset = intptr_t(track->getParserTrackParam().currentCmdAddr) - intptr_t(track->getParserTrackParam().baseAddr);
-                    wait = track->getParserTrackParam().wait;
-                    waitAmount = track->getParserTrackParam().waitAmount;
-                }
+    //             //sead::FormatFixedSafeString<32> str("%04X/%04X", wait, waitAmount);
 
-                if (sOffsetToLine)
-                    line = (*sOffsetToLine)[sTrack0Offset];
+    //             //ImGui::Text("Wait:   %d", wait);
+    //             //ImGui::SameLine();
+    //             //ImGui::ProgressBar(progress, ImVec2(120.0f, 0.0f), str.cstr());
+    //             //ImGui::Text("Offset: %d", sTrack0Offset);
+    //             //ImGui::Text("Line:   %d", line);
+    //             //ImGui::SameLine();
 
-                f32 progress = static_cast<f32>(wait) / static_cast<f32>(waitAmount);
+    //             ImGui::Checkbox("Follow", &sFollowSeq);
 
-                sead::FormatFixedSafeString<32> str("%04X/%04X", wait, waitAmount);
+    //             ImGui::SameLine();
 
-                //ImGui::Text("Wait:   %d", wait);
-                //ImGui::SameLine();
-                ImGui::ProgressBar(progress, ImVec2(80.0f, 0.0f), str.cstr());
-                //ImGui::Text("Offset: %d", sTrack0Offset);
-                ImGui::Text("Line:   %d", line);
-            }
+    //             static const char* sTrackNames[] = {
+    //                 "Track 0",
+    //                 "Track 1",
+    //                 "Track 2",
+    //                 "Track 3",
+    //                 "Track 4",
+    //                 "Track 5",
+    //                 "Track 6",
+    //                 "Track 7",
+    //                 "Track 8",
+    //                 "Track 9",
+    //                 "Track 10",
+    //                 "Track 11",
+    //                 "Track 12",
+    //                 "Track 13",
+    //                 "Track 14",
+    //                 "Track 15"
+    //             };
 
-            if (sTextEditor)
-            {
-                sTextEditor->Render("Editor");
-                sTextEditor->SetReadOnly(true);
-                sTextEditor->SetBreakpoints({ line });
-            }
-        }
-        ImGui::End();
-    }
+    //             ImGui::Combo("Track", (s32*)&sFollowTrack, sTrackNames, IM_ARRAYSIZE(sTrackNames));
+    //         }
+
+    //         if (sTextEditor)
+    //         {
+    //             sSeqTextKeeper.update(sSequencePlayer, *sTextEditor);
+
+    //             sTextEditor->SetReadOnly(true);
+    //             sTextEditor->Render("Editor");
+
+    //             if (sFollowSeq)
+    //             {
+    //                 const SeqTextKeeper::Track& track = sSeqTextKeeper.mTracks[sFollowTrack];
+    //                 if (track.active && track.line > 0)
+    //                 {
+    //                     sTextEditor->SetCursorPosition({ track.line - 1, 0 });
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     ImGui::End();
+    // }
 
     if (ImGui::Begin(ICON_LC_MUSIC " Player###PlayerWindow"))
     {
@@ -201,8 +212,10 @@ void DrawPlayerUI()
         {
             if (!sCurrentSoundPlayer->isActive())
             {
-                if (sCurrentSoundInfo)
-                    PlaySound(sCurrentSoundInfo);
+                if (sLastPlayedSound)
+                {
+                    PlaySound(sLastPlayedSound);
+                }
             }
             else
             {
@@ -447,7 +460,7 @@ void PlaySeqSound(const Sound* sound)
 
     const SequenceFile& seqFile = *static_cast<const SequenceFile*>(seqFileItem);
 
-    const BankFile* banks[nw::snd::SoundArchive::SEQ_BANK_MAX];
+    const Bank* banks[nw::snd::SoundArchive::SEQ_BANK_MAX];
     for (u32 i = 0; i < nw::snd::SoundArchive::SEQ_BANK_MAX; i++)
     {
         banks[i] = nullptr;
@@ -464,35 +477,12 @@ void PlaySeqSound(const Sound* sound)
         SEAD_ASSERT(item->getItemType() == Item::ItemType::Bank);
         const Bank* bank = static_cast<const Bank*>(item);
 
-        item = bank->getFileRef().getItem();
-        if (!item)
-        {
-            continue;
-        }
-
-        SEAD_ASSERT(item->getItemType() == Item::ItemType::BankFile);
-        const BankFile* bankFile = static_cast<const BankFile*>(item);
-
-        banks[i] = bankFile;
+        banks[i] = bank;
     }
 
+    if (!PlaySeqFile(seqFile, seqSoundInfo.getStartLabel(), banks, sound->getVolume()))
     {
-        snd::internal::driver::SoundThreadLock lock;
-
-        StopAllSoundPlayersWithoutLock();
-
-        sSequencePlayer.init();
-
-        sSequencePlayer.setInitialVolume(static_cast<f32>(sound->getVolume()) / 127.0f);
-        sSequencePlayer.setVolume(sVolume);
-
-        sSequencePlayer.setup(seqSoundInfo.getAllocateTrackFlags(), &sSequenceNoteOnCallback2);
-        sSequencePlayer.prepare(seqFile.getData(), seqSoundInfo.getStartOffset(), banks);
-
-        sCurrentSoundPlayer = &sSequencePlayer;
-
-        sSampleCount = 0;
-        sSampleRate = 0;
+        return;
     }
 
     sSelectedItem = const_cast<Sound*>(sound);
@@ -670,6 +660,8 @@ void PlaySound(const Sound* sound)
 {
     SEAD_ASSERT(sound);
 
+    sLastPlayedSound = sound;
+
     switch (sound->getSoundType())
     {
         case Sound::SoundType::Seq:
@@ -740,295 +732,72 @@ void PlayBankNote(u8 key, u8 velocity, const BankFile::VelocityRegion& velocityR
     sSampleRate = sWavePlayer.getSampleRate();
 }
 
-void PlaySound(const nw::snd::internal::SoundArchiveFile::SoundInfo* soundInfo)
+bool PlaySeqFile(const SequenceFile& seqFile, const sead::SafeString& startLabel, const Bank** bankArray, u8 volume)
 {
-    sCurrentSoundInfo = soundInfo;
-
-    switch (soundInfo->GetSoundType())
+    if (!seqFile.isValid())
     {
-        case nw::snd::SoundArchive::SOUND_TYPE_STRM:
-        {
-            const nw::snd::internal::SoundArchiveFile::FileInfo* fileInfo = sSoundArchive->detail_GetFileInfo(soundInfo->fileId);
-            SEAD_ASSERT(fileInfo);
-
-            SEAD_ASSERT(fileInfo->GetFileLocationType() == nw::snd::internal::SoundArchiveFile::FileLocationType::FILE_LOCATION_TYPE_EXTERNAL);
-            const nw::snd::internal::SoundArchiveFile::ExternalFileInfo* externalFileInfo = fileInfo->GetExternalFileInfo();
-            SEAD_ASSERT(externalFileInfo);
-
-            sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");
-            SEAD_ASSERT(device);
-
-            sead::FixedSafeString<512> dir;
-            bool b = sead::Path::getDirectoryName(&dir, sBfsar.getFilePath());
-            //SEAD_PRINT("%d\n", b);
-
-            sead::FixedSafeString<512> path;
-            path.format("%s/%s", dir.cstr(), externalFileInfo->filePath);
-            //SEAD_PRINT("%s\n", path.cstr());
-
-            sead::FileDevice::LoadArg arg;
-            arg.path = path;
-            u8* sStrmFile = device->tryLoad(arg);
-            if (!sStrmFile)
-            {
-                SEAD_PRINT("Stream file not found [%s]\n", externalFileInfo->filePath);
-                return;
-            }
-
-            const nw::snd::internal::SoundArchiveFile::StreamSoundInfo& strmSoundInfo = soundInfo->GetStreamSoundInfo();
-
-            StreamSoundPlayer::SetupArg setupArg;
-            setupArg.allocChannelCount = strmSoundInfo.allocateChannelCount;
-            setupArg.allocTrackFlag = strmSoundInfo.allocateTrackFlags;
-
-            if (false) // TODO
-            {
-                setupArg.pitch = strmSoundInfo.pitch;
-
-                const nw::snd::internal::SoundArchiveFile::SendValue send = strmSoundInfo.GetSendValue();
-
-                setupArg.mainSend = send.mainSend;
-                for (u32 i = 0; i < nw::snd::AUX_BUS_NUM; i++)
-                {
-                    setupArg.fxSend[i] = send.fxSend[i];
-                }
-            }
-            else
-            {
-                setupArg.pitch = 1.0f;
-                setupArg.mainSend = 127;
-                for (u32 i = 0; i < nw::snd::AUX_BUS_NUM; i++)
-                {
-                    setupArg.fxSend[i] = 0;
-                }
-            }
-
-            const nw::snd::internal::SoundArchiveFile::StreamTrackInfoTable* trackTable = strmSoundInfo.GetTrackInfoTable();
-            if (trackTable)
-            {
-                u32 tableCount = trackTable->GetTrackCount();
-                for (u32 i = 0; i < nw::snd::SoundArchive::STRM_TRACK_NUM && i < tableCount; i++)
-                {
-                    nw::snd::SoundArchive::StreamTrackInfo& tmp = setupArg.tracks[i];
-
-                    const nw::snd::internal::SoundArchiveFile::StreamTrackInfo* pTrackInfo = trackTable->GetTrackInfo(i);
-                    SEAD_ASSERT(pTrackInfo);
-
-                    const nw::snd::internal::SoundArchiveFile::StreamTrackInfo& trackInfo = *pTrackInfo;
-                    tmp.volume = trackInfo.volume;
-                    tmp.pan = trackInfo.pan;
-                    tmp.span = trackInfo.span;
-                    tmp.flags = trackInfo.flags;
-                    // TODO: Other info
-                    tmp.channelCount = static_cast<u8>(trackInfo.GetTrackChannelCount());
-
-                    u32 count = sead::Mathu::min(static_cast<u32>(tmp.channelCount), nw::snd::WAVE_CHANNEL_MAX);
-                    for (u32 j = 0; j < count; j++)
-                    {
-                        tmp.globalChannelIndex[j] = trackInfo.GetGlobalChannelIndex(j);
-                    }
-                }
-            }
-
-            {
-                snd::internal::driver::SoundThreadLock lock;
-
-                StopAllSoundPlayersWithoutLock();
-
-                sStreamPlayer.init();
-
-                sStreamPlayer.setInitialVolume(static_cast<f32>(soundInfo->volume) / 127.0f);
-                sStreamPlayer.setVolume(sVolume);
-
-                sStreamPlayer.setup(setupArg);
-                sStreamPlayer.prepare(sStrmFile);
-
-                sCurrentSoundPlayer = &sStreamPlayer;
-
-                sSampleCount = sStreamPlayer.getSampleCount();
-                sSampleRate = sStreamPlayer.getSampleRate();
-            }
-
-            if (arg.need_unload)
-            {
-                device->unload(sStrmFile);
-            }
-
-            break;
-        }
-
-        case nw::snd::SoundArchive::SOUND_TYPE_WAVE:
-        {
-            const void* waveSoundFile = sSoundDataMgr->detail_GetFileAddress(soundInfo->fileId);
-            if (!waveSoundFile)
-            {
-                SEAD_PRINT("WaveSound file not found\n");
-                return;
-            }
-
-            nw::snd::internal::WaveSoundFileReader waveSoundReader(waveSoundFile);
-
-            const nw::snd::internal::SoundArchiveFile::WaveSoundInfo& wavSoundInfo = soundInfo->GetWaveSoundInfo();
-
-            nw::snd::internal::WaveSoundNoteInfo noteInfo;
-            bool success = waveSoundReader.ReadNoteInfo(&noteInfo, wavSoundInfo.index, 0);
-            SEAD_ASSERT(success);
-
-            const void* waveArchiveFile = sSoundDataMgr->detail_GetFileAddress(sSoundArchive->GetItemFileId(noteInfo.waveArchiveId));
-            if (!waveArchiveFile)
-            {
-                SEAD_PRINT("WaveArchive file not found\n");
-                return;
-            }
-
-            const nw::snd::internal::SoundArchiveFile::WaveArchiveInfo* warcInfo = sSoundArchive->GetWaveArchiveInfo(noteInfo.waveArchiveId);
-            SEAD_ASSERT(warcInfo);
-            //SEAD_ASSERT(!warcInfo->isLoadIndividual);
-
-            nw::snd::internal::WaveArchiveFileReader warcReader(waveArchiveFile, warcInfo->isLoadIndividual);
-            const void* waveFile = warcReader.GetWaveFile(noteInfo.waveIndex);
-            SEAD_ASSERT(waveFile);
-
-            {
-                snd::internal::driver::SoundThreadLock lock;
-
-                StopAllSoundPlayersWithoutLock();
-
-                sWavePlayer.init();
-
-                sWavePlayer.setInitialVolume(static_cast<f32>(soundInfo->volume) / 127.0f);
-                sWavePlayer.setVolume(sVolume);
-
-                WaveSoundPlayer::PrepareArg arg;
-                arg.wsdFile = waveSoundFile;
-                arg.waveFile = waveFile;
-
-                sWavePlayer.prepare(wavSoundInfo.index, arg);
-
-                sCurrentSoundPlayer = &sWavePlayer;
-
-                sSampleCount = sWavePlayer.getSampleCount();
-                sSampleRate = sWavePlayer.getSampleRate();
-            }
-
-            break;
-        }
-
-        case nw::snd::SoundArchive::SOUND_TYPE_SEQ:
-        {
-            const void* seqSoundFile = sSoundDataMgr->detail_GetFileAddress(soundInfo->fileId);
-            SEAD_ASSERT(seqSoundFile);
-
-            const nw::snd::internal::SoundArchiveFile::SequenceSoundInfo& seqSoundInfo = soundInfo->GetSequenceSoundInfo();
-
-            const void* banks[4];
-            const void* warcs[4];
-            bool warcLoadIndividual[4];
-
-            for (u32 i = 0; i < 4; i++)
-            {
-                banks[i] = nullptr;
-                warcs[i] = nullptr;
-                warcLoadIndividual[i] = false;
-            }
-
-            u32 bankIds[4];
-            seqSoundInfo.GetBankIds(bankIds);
-
-            for (u32 i = 0; i < 4; i++)
-            {
-                if (bankIds[i] == nw::snd::SoundArchive::INVALID_ID)
-                {
-                    //SEAD_PRINT("Bank%d id is invalid\n", i);
-                    continue;
-                }
-
-                const nw::snd::internal::SoundArchiveFile::BankInfo* bankInfo = sSoundArchive->GetBankInfo(bankIds[i]);
-                SEAD_ASSERT(bankInfo);
-
-                const void* bankFile = sSoundDataMgr->detail_GetFileAddress(bankInfo->fileId);
-                if (!bankFile)
-                {
-                    SEAD_PRINT("Bank%d is nullptr\n", i);
-                    continue;
-                }
-
-                banks[i] = bankFile;
-
-                nw::snd::internal::BankFileReader bankFileReader(bankFile);
-                const nw::snd::internal::Util::WaveIdTable* table = bankFileReader.GetWaveIdTable();
-                if (!table)
-                {
-                    SEAD_PRINT("Bank WaveIdTable not found\n");
-                    return;
-                }
-
-                if (table->GetCount() == 0)
-                {
-                    SEAD_PRINT("Bank WaveIdTable::GetCount() == 0\n");
-                    return;
-                }
-
-                const nw::snd::internal::Util::WaveId* pWaveId = table->GetWaveId(0);
-                if (!pWaveId)
-                {
-                    SEAD_ASSERT(false, "WaveIdTable::GetWaveId() returned nullptr\n");
-                    return;
-                }
-
-                const void* warcFile = sSoundDataMgr->detail_GetFileAddress(sSoundArchive->GetItemFileId(pWaveId->waveArchiveId));
-                if (!warcFile)
-                {
-                    SEAD_PRINT("WaveArchive file not found\n");
-                    return;
-                }
-
-                const nw::snd::internal::SoundArchiveFile::WaveArchiveInfo* warcInfo = sSoundArchive->GetWaveArchiveInfo(pWaveId->waveArchiveId);
-                SEAD_ASSERT(warcInfo);
-
-                warcs[i] = warcFile;
-                warcLoadIndividual[i] = warcInfo->isLoadIndividual;
-            }
-
-            if (soundInfo->fileId != sCurrentFileId)
-            {
-                sCurrentFileId = soundInfo->fileId;
-                //ParseSequenceFile(soundInfo->fileId);
-            }
-
-            if (sTextEditor)
-            {
-                s32 line = (*sOffsetToLine)[seqSoundInfo.GetStartOffset()];
-                //SEAD_PRINT("%d\n", line);
-                if (line > 0)
-                    sTextEditor->SetCursorPosition({ line - 1, 0 });
-            }
-
-            {
-                snd::internal::driver::SoundThreadLock lock;
-
-                StopAllSoundPlayersWithoutLock();
-
-                sSequencePlayer.init();
-
-                sSequencePlayer.setInitialVolume(static_cast<f32>(soundInfo->volume) / 127.0f);
-                sSequencePlayer.setVolume(sVolume);
-
-                sSequencePlayer.setup(seqSoundInfo.allocateTrackFlags, &sSequenceNoteOnCallback);
-                sSequencePlayer.prepare(seqSoundFile, seqSoundInfo.GetStartOffset(), banks, warcs, warcLoadIndividual);
-
-                sCurrentSoundPlayer = &sSequencePlayer;
-
-                sSampleCount = 0;
-                sSampleRate = 0;
-            }
-
-            break;
-        }
-
-        default:
-            return;
+        SEAD_PRINT("SequenceFile is not valid\n");
+        return false;
     }
+
+    u32 startOffset = seqFile.getLabelOffset(startLabel);
+    if (startOffset == SequenceFile::cInvaldOffset)
+    {
+        SEAD_PRINT("Couldn't find label '%s'\n", startLabel.cstr());
+        return false;
+    }
+
+    u32 allocTracks = seqFile.getLabelAllocTracks(startLabel);
+
+    const BankFile* banks[nw::snd::SoundArchive::SEQ_BANK_MAX];
+    for (u32 i = 0; i < nw::snd::SoundArchive::SEQ_BANK_MAX; i++)
+    {
+        banks[i] = nullptr;
+    }
+
+    for (u32 i = 0; i < nw::snd::SoundArchive::SEQ_BANK_MAX; i++)
+    {
+        const Item* item = bankArray[i];
+        if (!item)
+        {
+            continue;
+        }
+
+        SEAD_ASSERT(item->getItemType() == Item::ItemType::Bank);
+        const Bank* bank = static_cast<const Bank*>(item);
+
+        item = bank->getFileRef().getItem();
+        if (!item)
+        {
+            continue;
+        }
+
+        SEAD_ASSERT(item->getItemType() == Item::ItemType::BankFile);
+        const BankFile* bankFile = static_cast<const BankFile*>(item);
+
+        banks[i] = bankFile;
+    }
+
+    {
+        snd::internal::driver::SoundThreadLock lock;
+
+        StopAllSoundPlayersWithoutLock();
+
+        sSequencePlayer.init();
+
+        sSequencePlayer.setInitialVolume(static_cast<f32>(volume) / 127.0f);
+        sSequencePlayer.setVolume(sVolume);
+
+        sSequencePlayer.setup(allocTracks, &sSequenceNoteOnCallback2);
+        sSequencePlayer.prepare(seqFile, startOffset, banks);
+
+        sCurrentSoundPlayer = &sSequencePlayer;
+
+        sSampleCount = 0;
+        sSampleRate = 0;
+    }
+
+    return true;
 }
 
 void StopAllSoundPlayers(bool stop)

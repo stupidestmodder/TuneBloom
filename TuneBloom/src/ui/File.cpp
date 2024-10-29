@@ -275,8 +275,6 @@ void CloseFile()
     sSampleRate = 0;
     sSampleCount = 0;
 
-    sCurrentSoundInfo = nullptr;
-
     StopAllSoundPlayers(true);
 
     if (sSoundInGroup)
