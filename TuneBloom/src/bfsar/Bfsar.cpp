@@ -80,6 +80,7 @@ bool Bfsar::open(const sead::SafeString& filePath, sead::Heap* heap)
 
     mBfsarFile = device->load(arg);
 
+    //if (sead::MemUtil::compare(mBfsarFile, "CSAR", 4) != 0)
     if (sead::MemUtil::compare(mBfsarFile, "FSAR", 4) != 0)
     {
         device->unload(mBfsarFile);
@@ -436,6 +437,7 @@ void Bfsar::open_(sead::Heap* heap)
         u32 seqFileSize = 0;
         const void* seqFile = mSoundArchive->detail_GetFileAddress(i, &seqFileSize);
 
+        //if (!seqFile || sead::MemUtil::compare(seqFile, "CSEQ", 4) != 0)
         if (!seqFile || sead::MemUtil::compare(seqFile, "FSEQ", 4) != 0)
         {
             continue;
@@ -1179,6 +1181,7 @@ void Bfsar::open_(sead::Heap* heap)
         u32 bankFileSize = 0;
         const void* bankFile = mSoundArchive->detail_GetFileAddress(i, &bankFileSize);
 
+        //if (!bankFile || sead::MemUtil::compare(bankFile, "CBNK", 4) != 0)
         if (!bankFile || sead::MemUtil::compare(bankFile, "FBNK", 4) != 0)
         {
             continue;
@@ -1380,9 +1383,16 @@ void Bfsar::open_(sead::Heap* heap)
             loadArg.path = path;
 
             u8* strmFile = device->tryLoad(loadArg);
-            SEAD_ASSERT_MSG(strmFile, "Stream file not found [%s]", filePath);
+            if (!strmFile)
+            {
+                SEAD_ASSERT_MSG(false, "Stream file not found [%s]", filePath);
+            }
 
-            SEAD_ASSERT_MSG(sead::MemUtil::compare(strmFile, "FSTM", 4) == 0, "Referenced file is not a bfstm [%s]", filePath);
+            //if (sead::MemUtil::compare(strmFile, "CSTM", 4) != 0)
+            if (sead::MemUtil::compare(strmFile, "FSTM", 4) != 0)
+            {
+                SEAD_ASSERT_MSG(false, "Referenced file is not a bfstm [%s]", filePath);
+            }
 
             nw::snd::internal::StreamSoundFileReader reader;
             reader.Initialize(strmFile);

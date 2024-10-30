@@ -527,6 +527,7 @@ void PlayStrmSound(const Sound* sound)
         return;
     }
 
+    //if (sead::MemUtil::compare(strmFile, "CSTM", 4) != 0)
     if (sead::MemUtil::compare(strmFile, "FSTM", 4) != 0)
     {
         SEAD_PRINT("Referenced file is not a bfstm [%s]\n", filePath);
