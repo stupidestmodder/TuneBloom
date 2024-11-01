@@ -409,6 +409,10 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
                         sSelectedItemIsSubWindow = false;
                         sSubSelectedItem = nullptr;
                     }
+                    else
+                    {
+                        sSelectedItemIsSubWindow = true;
+                    }
 
                     list.pushBack(addedItem);
 
@@ -690,7 +694,21 @@ bool ItemSelector(const char* name, const Item::List& list, Item** itemPtr, bool
     }
 
     ImGui::SameLine(0, style.ItemInnerSpacing.x);
+
+    bool redText = *itemPtr == nullptr && !allowNone;
+    if (redText)
+    {
+        ImGui::PushStyleColor(ImGuiCol_Text,         ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_TextDisabled, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
+    }
+
     ImGui::Text(name);
+
+    if (redText)
+    {
+        ImGui::PopStyleColor();
+        ImGui::PopStyleColor();
+    }
 
     return ret;
 }
