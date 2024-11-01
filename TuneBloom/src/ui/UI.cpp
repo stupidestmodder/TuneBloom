@@ -473,6 +473,125 @@ void DrawInfoUI()
     ImGui::End();
 }
 
+InstanciateItemCallback CreateGroupItemFunc(bool clear)
+{
+    static Item::ItemType sItemRefType = Item::ItemType::Invalid;
+    static u32 sLoadItem = 0;
+    static Item* sItemRef = nullptr;
+
+    static sead::FixedSafeString<256> sError;
+
+    if (clear)
+    {
+        sItemRefType = Item::ItemType::Invalid;
+        sLoadItem = 0;
+        sItemRef = nullptr;
+
+        sError.clear();
+    }
+
+    {
+        u32 itemRefType = (u32)sItemRefType - 1;
+        if (ImGui::Combo("Item Type", (s32*)&itemRefType, Group::ItemInfo::sItemIdTypes, IM_ARRAYSIZE(Group::ItemInfo::sItemIdTypes)))
+        {
+            sItemRefType = static_cast<Item::ItemType>(itemRefType + 1);
+            sItemRef = nullptr;
+
+            sLoadItem = 0; // All
+        }
+    }
+
+    {
+        Item* oldItem = sItemRef;
+        Item* item = oldItem;
+        if (ItemSelector("Item", sBfsar.getItemList(sItemRefType), &item, false))
+        {
+            sItemRef = item;
+
+            if (oldItem && item)
+            {
+                switch (sItemRefType)
+                {
+                    case Item::ItemType::Sound:
+                    {
+                        Sound* oldSound = static_cast<Sound*>(oldItem);
+                        Sound* sound = static_cast<Sound*>(item);
+                        if (oldSound->getSoundType() != sound->getSoundType())
+                        {
+                            sLoadItem = 0; // All
+                        }
+                    }
+
+                    case Item::ItemType::SoundSet:
+                    {
+                        SoundSet* oldSoundSet = static_cast<SoundSet*>(oldItem);
+                        SoundSet* soundSet = static_cast<SoundSet*>(item);
+                        if (oldSoundSet->getSoundSetType() != soundSet->getSoundSetType())
+                        {
+                            sLoadItem = 0; // All
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    {
+        u32 itemCount = 0;
+        const char** items = Group::ItemInfo::GetLoadItems(sItemRef, sItemRefType, &itemCount);
+
+        bool enable = sItemRef && items;
+
+        u32 oldLoadItem = sLoadItem;
+        u32 loadItem = oldLoadItem;
+        if (!enable)
+        {
+            ImGui::BeginDisabled();
+
+            static const char* all = "All";
+
+            itemCount = 1;
+            items = &all;
+            oldLoadItem = 0;
+            loadItem = 0;
+        }
+
+        if (ImGui::Combo("Load Items", (s32*)&loadItem, items, itemCount))
+        {
+            sLoadItem = loadItem;
+        }
+
+        if (!enable)
+        {
+            ImGui::EndDisabled();
+        }
+    }
+
+    WarningPopup("###LoadItemAdd", sError.cstr());
+
+    auto doCreate = []() -> Item*
+    {
+        SEAD_ASSERT(sSelectedItem);
+        SEAD_ASSERT(sSelectedItem->getItemType() == Item::ItemType::Group);
+
+        Group::ItemInfo* info = new Group::ItemInfo(static_cast<Group*>(sSelectedItem));
+        info->setItemRefType_(sItemRefType);
+        info->getItemRef().attach(sItemRef);
+        info->setLoadItem_(sLoadItem);
+
+        if (!info->validate(sError))
+        {
+            ImGui::OpenPopup("###LoadItemAdd");
+            delete info;
+            return nullptr;
+        }
+
+        return info;
+    };
+
+    return doCreate;
+}
+
 const char* GroupItemPrefixFunc(Item* item)
 {
     Group::ItemInfo* groupItem = (Group::ItemInfo*)item;
@@ -608,7 +727,7 @@ void DrawSubInfoUI()
             {
                 Group* group = static_cast<Group*>(sSelectedItem);
 
-                DrawAllItemsUI("Item", group->getItemInfoList(), nullptr, &GroupItemPrefixFunc);
+                DrawAllItemsUI("Item", group->getItemInfoList(), &CreateGroupItemFunc, &GroupItemPrefixFunc);
                 break;
             }
         }

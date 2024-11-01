@@ -276,6 +276,12 @@ public:
     {
     }
 
+    virtual bool validate(sead::BufferedSafeString& error) const
+    {
+        error = "Not implemented";
+        return false;
+    }
+
 private:
     void addReference_(ItemReference* ref)
     {

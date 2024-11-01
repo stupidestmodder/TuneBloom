@@ -1742,9 +1742,9 @@ void Bfsar::open_(sead::Heap* heap)
 
                     itemInfo->mItemRef.attach(getItem(itemInfoEx.itemId, getItemList(itemInfo->mItemRefType)));
                     SEAD_ASSERT(itemInfo->mItemRef.isAttached());
-                }
 
-                itemInfo->mLoadFlag = itemInfoEx.loadFlag;
+                    itemInfo->setLoadItems(itemInfoEx.loadFlag);
+                }
 
                 group->mItemInfoList.pushBack(itemInfo);
             };
