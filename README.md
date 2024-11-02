@@ -25,3 +25,4 @@ TuneBloom is an extremely fast & stable editor for editing NintendoWare audio fo
 - [STUPID Modder](https://github.com/stupidestmodder) - Development lead
 - [AboodXD](https://github.com/aboood40091) - Research & algorithms
 - [Luminyx1](https://github.com/Luminyx1) - Build system & logo
+- [Alex Barney](https://github.com/Thealexbarney) - DspTool (Adpcm Encoding)
