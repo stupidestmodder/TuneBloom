@@ -189,6 +189,8 @@ static bool ItemContextMenu(Item* item, CreateItemCallback createCallback, Conte
     return add;
 }
 
+static Item* sScrollItem = nullptr;
+
 void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback createCallback, ItemNamePrefixCallback nameCallback, ContextMenuCallback menuCallback, ItemFilterCallback filterCallback)
 {
     const bool cUseChild = true;
@@ -220,8 +222,6 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
     Item* item2 = nullptr;
 
     bool add = false;
-
-    static Item* sScrollItem = nullptr;
 
     Item*& selectedItem = isSubWindow ? sSubSelectedItem : sSelectedItem;
 
@@ -584,6 +584,56 @@ void DrawItemPropertiesUI()
     DupeNamePopup();
 }
 
+void SelectItem(Item* item)
+{
+    SEAD_ASSERT(item);
+
+    sSelectedItem = item;
+    sSubSelectedItem = nullptr;
+    sSelectedItemIsSubWindow = false;
+
+    sScrollItem = item;
+
+    switch (item->getItemType())
+    {
+        case Item::ItemType::Sound:
+            SetUITab(UIType::AllSounds);
+            break;
+
+        case Item::ItemType::SoundSet:
+            SetUITab(UIType::AllSoundSets);
+            break;
+
+        case Item::ItemType::Bank:
+            SetUITab(UIType::Banks);
+            break;
+
+        case Item::ItemType::WaveArchive:
+            SetUITab(UIType::WaveArchives);
+            break;
+
+        case Item::ItemType::Group:
+            SetUITab(UIType::Groups);
+            break;
+
+        case Item::ItemType::Player:
+            SetUITab(UIType::Players);
+            break;
+
+        case Item::ItemType::WaveFile:
+            SetUITab(UIType::WaveFiles);
+            break;
+
+        case Item::ItemType::SequenceFile:
+            SetUITab(UIType::SequenceFiles);
+            break;
+
+        case Item::ItemType::BankFile:
+            SetUITab(UIType::BankFiles);
+            break;
+    }
+}
+
 bool ItemSelector(const char* name, const Item::List& list, Item** itemPtr, bool allowNone)
 {
     SEAD_ASSERT(name);
@@ -646,6 +696,27 @@ bool ItemSelector(const char* name, const Item::List& list, Item** itemPtr, bool
         ImGui::EndCombo();
     }
     ImGui::PopItemWidth();
+
+    if (ImGui::BeginPopupContextItem())
+    {
+        bool disable = *itemPtr == nullptr;
+        if (disable)
+        {
+            ImGui::BeginDisabled();
+        }
+
+        if (ImGui::MenuItem(ICON_LC_EXTERNAL_LINK " Go To"))
+        {
+            SelectItem(*itemPtr);
+        }
+
+        if (disable)
+        {
+            ImGui::EndDisabled();
+        }
+
+        ImGui::End();
+    }
 
     ImGuiButtonFlags buttonFlags = ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups;
 

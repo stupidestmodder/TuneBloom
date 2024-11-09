@@ -7,6 +7,35 @@
 #include <bfsar/Bfsar.h>
 #include <bfsar/IdTable.h>
 
+enum class UIType
+{
+    Min = 0,
+
+    ProjectInfo = Min,
+
+    AllSounds,
+    StreamSounds,
+    WaveSounds,
+    SequenceSounds,
+
+    AllSoundSets,
+    WaveSoundSets,
+    SequenceSoundSets,
+
+    Banks,
+    WaveArchives,
+    Groups,
+    Players,
+
+    WaveFiles,
+    SequenceFiles,
+    BankFiles,
+
+    Max = BankFiles
+};
+
+void SetUITab(UIType type);
+
 struct FileFilter
 {
     FileFilter(const char* name_, const char* filter_)
@@ -43,6 +72,9 @@ extern u32 sSequenceSoundSetCount;
 
 
 //
+
+void SelectItem(Item* item);
+
 extern Item* sSelectedItem;
 extern Item* sSubSelectedItem;
 

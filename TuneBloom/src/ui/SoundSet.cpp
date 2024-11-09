@@ -76,6 +76,16 @@ void DrawSoundSetPropertiesUI()
             if (ImGui::Selectable(sound->getFormattedName().cstr()))
             {
             }
+
+            if (ImGui::BeginPopupContextItem())
+            {
+                if (ImGui::MenuItem(ICON_LC_EXTERNAL_LINK " Go To"))
+                {
+                    SelectItem(sound);
+                }
+
+                ImGui::End();
+            }
         }
     }
     ImGui::EndChild();

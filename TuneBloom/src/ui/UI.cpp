@@ -4,34 +4,12 @@
 
 #include <framework/seadProcessMeter.h>
 
-enum class UIType
-{
-    Min = 0,
-
-    ProjectInfo = Min,
-
-    AllSounds,
-    StreamSounds,
-    WaveSounds,
-    SequenceSounds,
-
-    AllSoundSets,
-    WaveSoundSets,
-    SequenceSoundSets,
-
-    Banks,
-    WaveArchives,
-    Groups,
-    Players,
-
-    WaveFiles,
-    SequenceFiles,
-    BankFiles,
-
-    Max = BankFiles
-};
-
 UIType sSelectedUIType = UIType::ProjectInfo;
+
+void SetUITab(UIType type)
+{
+    sSelectedUIType = type;
+}
 
 bool sShowSystemWindow = false;
 bool sShowDemoWindow = false;
