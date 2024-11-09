@@ -55,19 +55,10 @@ extern Bfsar sBfsar;
 
 extern const nw::snd::MemorySoundArchive* sSoundArchive;
 
-extern bool* sSoundInGroup;
-
 extern const SoundDataMgr* sSoundDataMgr;
 
 extern u32 sSampleRate;
 extern u32 sSampleCount;
-
-extern u32 sStreamSoundCount;
-extern u32 sWaveSoundCount;
-extern u32 sSequenceSoundCount;
-
-extern u32 sWaveSoundSetCount;
-extern u32 sSequenceSoundSetCount;
 
 
 

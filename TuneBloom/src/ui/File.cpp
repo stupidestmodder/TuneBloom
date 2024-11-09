@@ -167,15 +167,6 @@ Bfsar sBfsar;
 const SoundDataMgr* sSoundDataMgr = nullptr;
 const nw::snd::MemorySoundArchive* sSoundArchive = nullptr;
 
-bool* sSoundInGroup = nullptr;
-
-u32 sStreamSoundCount = 0;
-u32 sWaveSoundCount = 0;
-u32 sSequenceSoundCount = 0;
-
-u32 sWaveSoundSetCount = 0;
-u32 sSequenceSoundSetCount = 0;
-
 Item* sSelectedItem = nullptr;
 Item* sSubSelectedItem = nullptr;
 
@@ -213,50 +204,6 @@ void OpenFile()
     SEAD_ASSERT(fw);
 
     fw->setCaption(title);
-
-    sSoundInGroup = new bool[sSoundArchive->GetSoundCount()];
-    for (u32 i = 0; i < sSoundArchive->GetSoundCount(); i++)
-    {
-        sSoundInGroup[i] = false;
-
-        u32 soundId = sSoundArchive->GetSoundIdFromIndex(i);
-        const nw::snd::internal::SoundArchiveFile::SoundInfo* soundInfo = sSoundArchive->GetSoundInfo(soundId);
-        if (!soundInfo)
-            continue;
-
-        if (soundInfo->GetSoundType() == nw::snd::SoundArchive::SOUND_TYPE_STRM)
-            sStreamSoundCount++;
-        else if (soundInfo->GetSoundType() == nw::snd::SoundArchive::SOUND_TYPE_WAVE)
-            sWaveSoundCount++;
-
-        for (u32 groupNo = 0; groupNo < sSoundArchive->GetSoundGroupCount(); groupNo++)
-        {
-            const nw::snd::internal::SoundArchiveFile::SoundGroupInfo* groupInfo = sSoundArchive->detail_GetSoundGroupInfo(sSoundArchive->GetSoundGroupIdFromIndex(groupNo));
-            if (!groupInfo)
-                continue;
-
-            if (groupInfo->startId <= soundId && soundId <= groupInfo->endId)
-            {
-                sSoundInGroup[i] = true;
-                break;
-            }
-        }
-
-        if (!sSoundInGroup[i] && soundInfo->GetSoundType() == nw::snd::SoundArchive::SOUND_TYPE_SEQ)
-            sSequenceSoundCount++;
-    }
-
-    for (u32 groupNo = 0; groupNo < sSoundArchive->GetSoundGroupCount(); groupNo++)
-    {
-        const nw::snd::internal::SoundArchiveFile::SoundGroupInfo* groupInfo = sSoundArchive->detail_GetSoundGroupInfo(sSoundArchive->GetSoundGroupIdFromIndex(groupNo));
-        if (!groupInfo)
-            continue;
-
-        if (groupInfo->GetWaveSoundGroupInfo())
-            sWaveSoundSetCount++;
-        else
-            sSequenceSoundSetCount++;
-    }
 }
 
 void SaveFile()
@@ -305,23 +252,10 @@ void CloseFile()
     sSelectedItemIsSubWindow = false;
     sFileWindows.clear();
 
-    sStreamSoundCount = 0;
-    sWaveSoundCount = 0;
-    sSequenceSoundCount = 0;
-
-    sWaveSoundSetCount = 0;
-    sSequenceSoundSetCount = 0;
-
     sSampleRate = 0;
     sSampleCount = 0;
 
     StopAllSoundPlayers(true);
-
-    if (sSoundInGroup)
-    {
-        delete sSoundInGroup;
-        sSoundInGroup = nullptr;
-    }
 
     sBfsar.close();
 
