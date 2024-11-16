@@ -225,6 +225,14 @@ void DrawPlayerUI()
             }
         }
 
+        if (sCurrentSoundPlayer && !sCurrentSoundPlayer->isActive() && sLastPlayedSound)
+        {
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNone))
+            {
+                ImGui::SetTooltip("Last Sound '%s'", sLastPlayedSound->getFormattedName().cstr());
+            }
+        }
+
         ImGui::SameLine();
 
         if (ImGui::ButtonEx(ICON_LC_SQUARE, ImVec2(0.0f, 0.0f), ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonMiddle))
