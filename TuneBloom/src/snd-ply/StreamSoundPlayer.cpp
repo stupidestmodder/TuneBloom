@@ -610,9 +610,9 @@ void StreamSoundPlayer::update()
         StreamChannel& channel = mChannels[ch];
         if (!channel.mVoice)
         {
-            //deinit(false);
+            deinit(false);
             //mFinishFlag = true;
-            //return;
+            return;
         }
     }
 

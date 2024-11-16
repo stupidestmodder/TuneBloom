@@ -231,7 +231,7 @@ void DrawPlayerUI()
         {
             if (ImGui::IsMouseReleased(ImGuiMouseButton_Middle))
             {
-                //StopAllSoundPlayers(true);
+                StopAllSoundPlayers(true);
                 StopAllVoices();
             }
             else
