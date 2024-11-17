@@ -1337,7 +1337,10 @@ void Bfsar::open_(sead::Heap* heap)
         SEAD_ASSERT(bank->mWaveArchiveType != WaveArchiveType::Invalid);
 
         bank->mFileRef.attach(getItem(bankFileIdxMap[bankInfo->fileId], getBankFileList()));
-        SEAD_ASSERT(bank->mFileRef.isAttached());
+        if (!bank->mFileRef.isAttached())
+        {
+            //SEAD_ASSERT(false);
+        }
 
         mBankList.pushBack(bank);
     }
@@ -1626,59 +1629,63 @@ void Bfsar::open_(sead::Heap* heap)
                 sound->mWaveSoundInfo.mIsReleasePriorityFix = waveSoundInfo.GetIsReleasePriorityFix();
             }
 
-            nw::snd::internal::WaveSoundFileReader reader(mSoundArchive->detail_GetFileAddress(soundInfo->fileId));
-            SEAD_ASSERT(reader.IsAvailable());
-
-            nw::snd::internal::WaveSoundNoteInfo noteInfo;
-            bool success = reader.ReadNoteInfo(&noteInfo, waveSoundInfo.index, 0);
-            SEAD_ASSERT(success);
-
-            //? noteInfo.waveIndex is patched with global wave index already
-            SEAD_ASSERT(noteInfo.waveArchiveId == 0);
-            WaveFile* waveFile = static_cast<WaveFile*>(getItem(noteInfo.waveIndex, getWaveFileList()));
-
-            sound->mWaveSoundInfo.mWaveFileRef.attach(waveFile);
-
-            const nw::snd::internal::WaveSoundFile::WaveSoundInfo& innerWaveSoundInfo = reader.GetWaveSoundInfo(waveSoundInfo.index);
-
-            sound->mWaveSoundInfo.mEnablePan = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_PAN) != 0;
-            if (sound->mWaveSoundInfo.mEnablePan)
+            const void* wsdFile = mSoundArchive->detail_GetFileAddress(soundInfo->fileId);
+            if (wsdFile)
             {
-                sound->mWaveSoundInfo.mPan = innerWaveSoundInfo.GetPan();
-                sound->mWaveSoundInfo.mSurroundPan = innerWaveSoundInfo.GetSurroundPan();
-            }
+                nw::snd::internal::WaveSoundFileReader reader(wsdFile);
+                SEAD_ASSERT(reader.IsAvailable());
 
-            sound->mWaveSoundInfo.mEnablePitch = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_PITCH) != 0;
-            if (sound->mWaveSoundInfo.mEnablePitch)
-            {
-                sound->mWaveSoundInfo.mPitch = innerWaveSoundInfo.GetPitch();
-            }
+                nw::snd::internal::WaveSoundNoteInfo noteInfo;
+                bool success = reader.ReadNoteInfo(&noteInfo, waveSoundInfo.index, 0);
+                SEAD_ASSERT(success);
 
-            sound->mWaveSoundInfo.mEnableSend = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_SEND) != 0;
-            if (sound->mWaveSoundInfo.mEnableSend)
-            {
-                innerWaveSoundInfo.GetSendValue(&sound->mWaveSoundInfo.mMainSend, sound->mWaveSoundInfo.mFxSend, nw::snd::AUX_BUS_NUM);
-            }
+                //? noteInfo.waveIndex is patched with global wave index already
+                SEAD_ASSERT(noteInfo.waveArchiveId == 0);
+                WaveFile* waveFile = static_cast<WaveFile*>(getItem(noteInfo.waveIndex, getWaveFileList()));
 
-            sound->mWaveSoundInfo.mEnableEnvelope = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_ENVELOPE) != 0;
-            if (sound->mWaveSoundInfo.mEnableEnvelope)
-            {
-                const nw::snd::AdshrCurve& adshrCurveInfo = innerWaveSoundInfo.GetAdshrCurve();
-                sound->mWaveSoundInfo.mAdshrCurve.attack = adshrCurveInfo.attack;
-                sound->mWaveSoundInfo.mAdshrCurve.decay = adshrCurveInfo.decay;
-                sound->mWaveSoundInfo.mAdshrCurve.sustain = adshrCurveInfo.sustain;
-                sound->mWaveSoundInfo.mAdshrCurve.hold = adshrCurveInfo.hold;
-                sound->mWaveSoundInfo.mAdshrCurve.release = adshrCurveInfo.release;
-            }
+                sound->mWaveSoundInfo.mWaveFileRef.attach(waveFile);
 
-            if (BfwsdFile::isFilterSupportedVersion(reader.mHeader->header.version))
-            {
-                sound->mWaveSoundInfo.mEnableFilter = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_FILTER) != 0;
-                if (sound->mWaveSoundInfo.mEnableFilter)
+                const nw::snd::internal::WaveSoundFile::WaveSoundInfo& innerWaveSoundInfo = reader.GetWaveSoundInfo(waveSoundInfo.index);
+
+                sound->mWaveSoundInfo.mEnablePan = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_PAN) != 0;
+                if (sound->mWaveSoundInfo.mEnablePan)
                 {
-                    sound->mWaveSoundInfo.mLpfFreq = innerWaveSoundInfo.GetLpfFreq();
-                    sound->mWaveSoundInfo.mBiquadType = innerWaveSoundInfo.GetBiquadType();
-                    sound->mWaveSoundInfo.mBiquadValue = innerWaveSoundInfo.GetBiquadValue();
+                    sound->mWaveSoundInfo.mPan = innerWaveSoundInfo.GetPan();
+                    sound->mWaveSoundInfo.mSurroundPan = innerWaveSoundInfo.GetSurroundPan();
+                }
+
+                sound->mWaveSoundInfo.mEnablePitch = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_PITCH) != 0;
+                if (sound->mWaveSoundInfo.mEnablePitch)
+                {
+                    sound->mWaveSoundInfo.mPitch = innerWaveSoundInfo.GetPitch();
+                }
+
+                sound->mWaveSoundInfo.mEnableSend = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_SEND) != 0;
+                if (sound->mWaveSoundInfo.mEnableSend)
+                {
+                    innerWaveSoundInfo.GetSendValue(&sound->mWaveSoundInfo.mMainSend, sound->mWaveSoundInfo.mFxSend, nw::snd::AUX_BUS_NUM);
+                }
+
+                sound->mWaveSoundInfo.mEnableEnvelope = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_ENVELOPE) != 0;
+                if (sound->mWaveSoundInfo.mEnableEnvelope)
+                {
+                    const nw::snd::AdshrCurve& adshrCurveInfo = innerWaveSoundInfo.GetAdshrCurve();
+                    sound->mWaveSoundInfo.mAdshrCurve.attack = adshrCurveInfo.attack;
+                    sound->mWaveSoundInfo.mAdshrCurve.decay = adshrCurveInfo.decay;
+                    sound->mWaveSoundInfo.mAdshrCurve.sustain = adshrCurveInfo.sustain;
+                    sound->mWaveSoundInfo.mAdshrCurve.hold = adshrCurveInfo.hold;
+                    sound->mWaveSoundInfo.mAdshrCurve.release = adshrCurveInfo.release;
+                }
+
+                if (BfwsdFile::isFilterSupportedVersion(reader.mHeader->header.version))
+                {
+                    sound->mWaveSoundInfo.mEnableFilter = innerWaveSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::WAVE_SOUND_INFO_FILTER) != 0;
+                    if (sound->mWaveSoundInfo.mEnableFilter)
+                    {
+                        sound->mWaveSoundInfo.mLpfFreq = innerWaveSoundInfo.GetLpfFreq();
+                        sound->mWaveSoundInfo.mBiquadType = innerWaveSoundInfo.GetBiquadType();
+                        sound->mWaveSoundInfo.mBiquadValue = innerWaveSoundInfo.GetBiquadValue();
+                    }
                 }
             }
         }
