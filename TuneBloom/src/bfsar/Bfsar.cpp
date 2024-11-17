@@ -1453,6 +1453,10 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                 if (table.item[j] != nw::snd::SoundArchive::INVALID_ID)
                 {
                     sound->mSequenceSoundInfo.mBankRefs[j]->attach(getItem(table.item[j], getBankList()));
+                    if (!sound->mSequenceSoundInfo.mBankRefs[j]->isAttached())
+                    {
+                        //SEAD_ASSERT(false);
+                    }
                 }
             }
 
@@ -1460,6 +1464,10 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             SequenceFile* seqFile = static_cast<SequenceFile*>(getItem(globalSeqIdx, getSequenceFileList()));
 
             sound->mSequenceSoundInfo.mSequenceFileRef.attach(seqFile);
+            if (!sound->mSequenceSoundInfo.mSequenceFileRef.isAttached())
+            {
+                //SEAD_ASSERT(false);
+            }
 
             sound->mSequenceSoundInfo.mEnableStartOffset = seqSoundInfo.optionParameter.GetTrueCount(nw::snd::internal::SEQ_SOUND_INFO_START_OFFSET) != 0;
             if (sound->mSequenceSoundInfo.mEnableStartOffset && seqFile)
@@ -1505,59 +1513,63 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             loadArg.path = path;
 
             u8* strmFile = device->tryLoad(loadArg);
-            if (!strmFile)
+            if (strmFile)
             {
-                SEAD_ASSERT_MSG(false, "Stream file not found [%s]", filePath);
-            }
-
-            //if (sead::MemUtil::compare(strmFile, "CSTM", 4) != 0)
-            if (sead::MemUtil::compare(strmFile, "FSTM", 4) != 0)
-            {
-                SEAD_ASSERT_MSG(false, "Referenced file is not a bfstm [%s]", filePath);
-            }
-
-            nw::snd::internal::StreamSoundFileReader reader;
-            reader.Initialize(strmFile);
-            SEAD_ASSERT(reader.IsAvailable());
-
-            // If track information is embedded in bXstm (up to binary version 0.2.0.0)
-            if (reader.IsTrackInfoAvailable())
-            {
-                u32 trackCount = reader.GetTrackCount();
-                if (trackCount > cStrmTrackNum)
+                //if (sead::MemUtil::compare(strmFile, "CSTM", 4) == 0)
+                if (sead::MemUtil::compare(strmFile, "FSTM", 4) == 0)
                 {
-                    trackCount = cStrmTrackNum;
-                }
+                    nw::snd::internal::StreamSoundFileReader reader;
+                    reader.Initialize(strmFile);
+                    SEAD_ASSERT(reader.IsAvailable());
 
-                // Read track information.
-                for (u32 j = 0; j < trackCount; j++)
-                {
-                    nw::snd::internal::StreamSoundFileReader::TrackInfo trackInfo;
-                    b = reader.ReadStreamTrackInfo(&trackInfo, j);
-                    SEAD_ASSERT(b);
-
-                    Sound::StreamSoundInfo::Track* track = new(heap) Sound::StreamSoundInfo::Track();
-                    track->mId = j;
-
-                    track->mEnableName = true;
-                    track->mName = "Track";
-
-                    track->mVolume = trackInfo.volume;
-                    track->mPan = trackInfo.pan;
-                    track->mSPan = trackInfo.span;
-                    track->mFlags = trackInfo.flags;
-
-                    u8 channelCount = trackInfo.channelCount;
-                    SEAD_ASSERT(channelCount <= nw::snd::WAVE_CHANNEL_MAX);
-
-                    for (u8 k = 0; k < channelCount; k++)
+                    // If track information is embedded in bXstm (up to binary version 0.2.0.0)
+                    if (reader.IsTrackInfoAvailable())
                     {
-                        u8& channel = *track->mChannels.birthBack();
-                        channel = trackInfo.globalChannelIndex[k];
-                    }
+                        u32 trackCount = reader.GetTrackCount();
+                        if (trackCount > cStrmTrackNum)
+                        {
+                            trackCount = cStrmTrackNum;
+                        }
 
-                    sound->mStreamSoundInfo.mTrackList.pushBack(track);
+                        // Read track information.
+                        for (u32 j = 0; j < trackCount; j++)
+                        {
+                            nw::snd::internal::StreamSoundFileReader::TrackInfo trackInfo;
+                            b = reader.ReadStreamTrackInfo(&trackInfo, j);
+                            SEAD_ASSERT(b);
+
+                            Sound::StreamSoundInfo::Track* track = new(heap) Sound::StreamSoundInfo::Track();
+                            track->mId = j;
+
+                            track->mEnableName = true;
+                            track->mName = "Track";
+
+                            track->mVolume = trackInfo.volume;
+                            track->mPan = trackInfo.pan;
+                            track->mSPan = trackInfo.span;
+                            track->mFlags = trackInfo.flags;
+
+                            u8 channelCount = trackInfo.channelCount;
+                            SEAD_ASSERT(channelCount <= nw::snd::WAVE_CHANNEL_MAX);
+
+                            for (u8 k = 0; k < channelCount; k++)
+                            {
+                                u8& channel = *track->mChannels.birthBack();
+                                channel = trackInfo.globalChannelIndex[k];
+                            }
+
+                            sound->mStreamSoundInfo.mTrackList.pushBack(track);
+                        }
+                    }
                 }
+                else
+                {
+                    //SEAD_ASSERT_MSG(false, "Referenced file is not a bfstm [%s]", filePath);
+                }
+            }
+            else
+            {
+                //SEAD_ASSERT_MSG(false, "Stream file not found [%s]", filePath);
             }
 
             if (isStreamTrackInfoAvailable())
@@ -1647,11 +1659,11 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                 }
             }
 
-            // TODO: Only load the same bfstm file once ?
-            readStreamWaves_(strmFile, sound->mStreamSoundInfo.mTrackList);
-
-            if (loadArg.need_unload)
+            if (strmFile)
             {
+                // TODO: Only load the same bfstm file once ?
+                readStreamWaves_(strmFile, sound->mStreamSoundInfo.mTrackList);
+
                 device->unload(strmFile);
             }
         }
