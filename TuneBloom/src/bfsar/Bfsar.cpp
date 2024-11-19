@@ -1512,12 +1512,16 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             sead::FileDevice::LoadArg loadArg;
             loadArg.path = path;
 
+            bool validStrmFile = false;
+
             u8* strmFile = device->tryLoad(loadArg);
             if (strmFile)
             {
                 //if (sead::MemUtil::compare(strmFile, "CSTM", 4) == 0)
                 if (sead::MemUtil::compare(strmFile, "FSTM", 4) == 0)
                 {
+                    validStrmFile = true;
+
                     nw::snd::internal::StreamSoundFileReader reader;
                     reader.Initialize(strmFile);
                     SEAD_ASSERT(reader.IsAvailable());
@@ -1659,11 +1663,14 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                 }
             }
 
-            if (strmFile)
+            if (validStrmFile)
             {
                 // TODO: Only load the same bfstm file once ?
                 readStreamWaves_(strmFile, sound->mStreamSoundInfo.mTrackList);
+            }
 
+            if (strmFile)
+            {
                 device->unload(strmFile);
             }
         }
