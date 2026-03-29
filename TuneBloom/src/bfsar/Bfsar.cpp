@@ -4696,20 +4696,46 @@ bool Bfsar::validate_()
 {
     sead::FixedSafeString<1024> error;
 
-    auto validateList = [&error](const ItemList& list)
+    auto validateList = [&error](const ItemList& list, bool validateWaveSoundSet = false)
     {
         for (auto it = list.robustBegin(); it != list.robustEnd(); ++it)
         {
             const Item* item = (*it).val();
             SEAD_ASSERT(item);
 
-            if (item->getItemType() == Item::ItemType::Sound)
+            bool valid = true;
+            if (!validateWaveSoundSet)
             {
+                if (item->getItemType() == Item::ItemType::Sound)
+                {
+                    const Sound* sound = static_cast<const Sound*>(item);
+                    sound->mOwnerSet = nullptr; //? Reset for when validating SoundSets
+                }
+
+                valid = item->validate(error);
+            }
+            else
+            {
+                SEAD_ASSERT(item->getItemType() == Item::ItemType::Sound);
                 const Sound* sound = static_cast<const Sound*>(item);
-                sound->mOwnerSet = nullptr; //? Reset for when validating SoundSets
+                if (sound->getSoundType() == Sound::SoundType::Wave)
+                {
+                    const SoundSet* soundSet = sound->mOwnerSet;
+                    if (!soundSet)
+                    {
+                        error = "Sound of type Wave must be in a SoundSet";
+                        valid = false;
+                    }
+                    else if (soundSet->getSoundSetType() != SoundSet::SoundSetType::Wave)
+                    {
+                        error = "Sound of type Wave must be in a SoundSet of type Wave";
+                        valid = false;
+                        item = soundSet; //? Set error item to SoundSet since it's the one with the issue
+                    }
+                }
             }
 
-            if (!item->validate(error))
+            if (!valid)
             {
                 if (error.isEmpty())
                 {
@@ -4732,6 +4758,11 @@ bool Bfsar::validate_()
     }
 
     if (!validateList(mSoundSetList))
+    {
+        return false;
+    }
+
+    if (!validateList(mSoundList, true)) // Validate that Wave sounds are in SoundSets of type Wave
     {
         return false;
     }
