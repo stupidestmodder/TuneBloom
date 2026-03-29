@@ -266,7 +266,7 @@ private:
 
     bool validateName_(const sead::SafeString& name, const Item::List& list, const Item* ignoreItem = nullptr) const;
 
-    bool readStreamWaves_(const void* strmFile, Sound::StreamSoundInfo::Track::List& tracks);
+    bool readStreamWaves_(const Sound* sound, const void* strmFile, Sound::StreamSoundInfo::Track::List& tracks);
 
 private:
     bool mOpen;

@@ -1338,6 +1338,7 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
         bankFileIdxMap.try_emplace(i, globalId);
     }
 
+    //? Load Banks first so Sequence Sounds can reference them
     for (u32 i = 0; i < soundArchive.GetBankCount(); i++)
     {
         const nw::snd::internal::SoundArchiveFile::BankInfo* bankInfo = soundArchive.GetBankInfo(soundArchive.GetBankIdFromIndex(i));
@@ -1375,8 +1376,38 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
 
         SEAD_ASSERT(bank->mWaveArchiveType != WaveArchiveType::Invalid);
 
-        bank->mFileRef.attach(getItem(bankFileIdxMap[bankInfo->fileId], getBankFileList()));
-        if (!bank->mFileRef.isAttached())
+        BankFile* bankFile = static_cast<BankFile*>(getItem(bankFileIdxMap[bankInfo->fileId], getBankFileList()));
+
+        bank->mFileRef.attach(bankFile);
+        if (bank->mFileRef.isAttached())
+        {
+            if (bankFile->mName == "Bank")
+            {
+                bankFile->mName.format("GUESS_%s", bank->mName.cstr());
+            }
+
+            for (Item* instrItem : bankFile->getInstrumentList())
+            {
+                BankFile::Instrument& instr = *static_cast<BankFile::Instrument*>(instrItem);
+                for (Item* keyRegionItem : instr.getKeyRegionList())
+                {
+                    BankFile::KeyRegion& keyRegion = *static_cast<BankFile::KeyRegion*>(keyRegionItem);
+                    for (Item* velRegionItem : keyRegion.getVelocityRegionList())
+                    {
+                        BankFile::VelocityRegion& velRegion = *static_cast<BankFile::VelocityRegion*>(velRegionItem);
+                        if (velRegion.getWaveFileRef().isAttached())
+                        {
+                            Item* waveFile = velRegion.getWaveFileRef().getItem();
+                            if (waveFile->mName == "Wave")
+                            {
+                                waveFile->mName.format("GUESS_%s_INSTR_%u", bank->mName.cstr(), instr.mId);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else
         {
             //SEAD_ASSERT(false);
         }
@@ -1464,7 +1495,14 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             SequenceFile* seqFile = static_cast<SequenceFile*>(getItem(globalSeqIdx, getSequenceFileList()));
 
             sound->mSequenceSoundInfo.mSequenceFileRef.attach(seqFile);
-            if (!sound->mSequenceSoundInfo.mSequenceFileRef.isAttached())
+            if (sound->mSequenceSoundInfo.mSequenceFileRef.isAttached())
+            {
+                if (seqFile->mName == "Sequence")
+                {
+                    seqFile->mName.format("GUESS_%s", sound->mName.cstr());
+                }
+            }
+            else
             {
                 //SEAD_ASSERT(false);
             }
@@ -1666,7 +1704,7 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             if (validStrmFile)
             {
                 // TODO: Only load the same bfstm file once ?
-                readStreamWaves_(strmFile, sound->mStreamSoundInfo.mTrackList);
+                readStreamWaves_(sound, strmFile, sound->mStreamSoundInfo.mTrackList);
             }
 
             if (strmFile)
@@ -1702,6 +1740,13 @@ void Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                 WaveFile* waveFile = static_cast<WaveFile*>(getItem(noteInfo.waveIndex, getWaveFileList()));
 
                 sound->mWaveSoundInfo.mWaveFileRef.attach(waveFile);
+                if (sound->mWaveSoundInfo.mWaveFileRef.isAttached())
+                {
+                    if (waveFile->mName == "Wave")
+                    {
+                        waveFile->mName.format("GUESS_%s", sound->mName.cstr());
+                    }
+                }
 
                 const nw::snd::internal::WaveSoundFile::WaveSoundInfo& innerWaveSoundInfo = reader.GetWaveSoundInfo(waveSoundInfo.index);
 
@@ -4826,7 +4871,7 @@ bool Bfsar::validateName_(const sead::SafeString& name, const Item::List& list, 
     return true;
 }
 
-bool Bfsar::readStreamWaves_(const void* strmFile, Sound::StreamSoundInfo::Track::List& tracks)
+bool Bfsar::readStreamWaves_(const Sound* sound, const void* strmFile, Sound::StreamSoundInfo::Track::List& tracks)
 {
     if (tracks.isEmpty())
     {
@@ -4892,7 +4937,7 @@ bool Bfsar::readStreamWaves_(const void* strmFile, Sound::StreamSoundInfo::Track
         wave->mId = mWaveFileList.size();
 
         wave->mEnableName = true;
-        wave->mName = "Wave";
+        wave->mName.format("GUESS_%s_TRACK_%u", sound->getName().cstr(), trackNo);
 
         wave->mVersion = 0x00010200;
         wave->mDataEndian = nw::ut::GetFileEndian(*reader.mHeader);
