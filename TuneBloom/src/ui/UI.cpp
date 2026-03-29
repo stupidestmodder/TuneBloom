@@ -1456,6 +1456,20 @@ FileWindow* OpenFileWindow(Item* item)
     }
 }
 
+InstanciateItemCallback CreateSequenceFileFunc(bool clear)
+{
+    auto doCreate = []() -> Item*
+    {
+        SequenceFile* seq = new SequenceFile();
+        seq->setEnableName(true);
+        seq->getName() = "Sequence";
+
+        return seq;
+    };
+
+    return doCreate;
+}
+
 const char* SequenceFileNamePrefixFunc(Item* item)
 {
     SequenceFile* seq = static_cast<SequenceFile*>(item);
@@ -1472,7 +1486,21 @@ const char* SequenceFileNamePrefixFunc(Item* item)
 
 void DrawSequenceFilesUI()
 {
-    DrawAllItemsUI("Sequence File", sBfsar.getSequenceFileList(), nullptr, &SequenceFileNamePrefixFunc);
+    DrawAllItemsUI("Sequence File", sBfsar.getSequenceFileList(), &CreateSequenceFileFunc, &SequenceFileNamePrefixFunc, nullptr, nullptr, true);
+}
+
+InstanciateItemCallback CreateBankFileFunc(bool clear)
+{
+    auto doCreate = []() -> Item*
+    {
+        BankFile* bank = new BankFile();
+        bank->setEnableName(true);
+        bank->getName() = "Bank";
+
+        return bank;
+    };
+
+    return doCreate;
 }
 
 const char* BankFileNamePrefixFunc(Item* item)
@@ -1491,7 +1519,7 @@ const char* BankFileNamePrefixFunc(Item* item)
 
 void DrawBankFilesUI()
 {
-    DrawAllItemsUI("Bank File", sBfsar.getBankFileList(), nullptr, &BankFileNamePrefixFunc);
+    DrawAllItemsUI("Bank File", sBfsar.getBankFileList(), &CreateBankFileFunc, &BankFileNamePrefixFunc, nullptr, nullptr, true);
 }
 
 bool DrawVersionUI(u32* versionPtr, u32 versionByteNum)

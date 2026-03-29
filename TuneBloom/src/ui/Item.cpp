@@ -208,7 +208,7 @@ static bool ItemContextMenu(Item* item, CreateItemCallback createCallback, Conte
 
 static Item* sScrollItem = nullptr;
 
-void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback createCallback, ItemNamePrefixCallback nameCallback, ContextMenuCallback menuCallback, ItemFilterCallback filterCallback)
+void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback createCallback, ItemNamePrefixCallback nameCallback, ContextMenuCallback menuCallback, ItemFilterCallback filterCallback, bool disableAddWindow)
 {
     const bool cUseChild = true;
 
@@ -429,7 +429,7 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
 
             ImVec2 buttonSize((ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x * 2.0f) / 2.0f, 0.0f);
 
-            if (ImGui::Button("Add", buttonSize))
+            if (disableAddWindow || ImGui::Button("Add", buttonSize))
             {
                 SEAD_ASSERT(instanciateItemCallback);
                 Item* addedItem = instanciateItemCallback();
