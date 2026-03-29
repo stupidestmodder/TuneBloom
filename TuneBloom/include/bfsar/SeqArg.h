@@ -146,7 +146,7 @@ public:
             return { 0 };
 
         u32 runs = (std::bit_width(mValue) + 6) / 7;
-        SEAD_ASSERT(1 <= runs <= 4);
+        SEAD_ASSERT(1 <= runs && runs <= 4);
         std::vector<u8> ret;
 
         for (u32 i = runs - 1; i > 0; i--)
