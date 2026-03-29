@@ -172,6 +172,11 @@ Bfsar sBfsar;
 Item* sSelectedItem = nullptr;
 Item* sSubSelectedItem = nullptr;
 
+void NewFile()
+{
+    PopupMgr::instance()->addPopup({ "TODO", nullptr });
+}
+
 void OpenFile()
 {
     sead::FixedSafeString<512> filePath;

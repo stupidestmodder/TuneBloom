@@ -122,6 +122,7 @@ extern ItemList sFileWindows;
 void DrawMenuBar();
 void DrawUI();
 
+void NewFile();
 void OpenFile();
 void SaveFile();
 void SaveFileAs();

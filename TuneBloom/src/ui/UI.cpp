@@ -100,6 +100,11 @@ void DrawMenuBar()
     {
         if (ImGui::BeginMenu("File"))
         {
+            if (ImGui::MenuItem("New"))
+            {
+                NewFile();
+            }
+
             if (ImGui::MenuItem("Open"))
             {
                 OpenFile();
