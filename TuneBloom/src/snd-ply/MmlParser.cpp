@@ -1018,20 +1018,39 @@ void MmlParser::noteOnCommandProc(SequenceTrack* track, s32 key, s32 velocity, s
 
 u16 MmlParser::Read16(const u8** ptr)
 {
-    u16 ret = ReadByte(ptr);
-    ret <<= 8;
-    ret |= ReadByte(ptr);
-    return ret;
+    if (sFileEndian == sead::Endian::eBig)
+    {
+        u16 ret = ReadByte(ptr);
+        ret <<= 8;
+        ret |= ReadByte(ptr);
+        return ret;
+    }
+    else
+    {
+        u16 ret = ReadByte(ptr);
+        ret |= (ReadByte(ptr) << 8);
+        return ret;
+    }
 }
 
 u32 MmlParser::Read24(const u8** ptr)
 {
-    u32 ret = ReadByte(ptr);
-    ret <<= 8;
-    ret |= ReadByte(ptr);
-    ret <<= 8;
-    ret |= ReadByte(ptr);
-    return ret;
+    if (sFileEndian == sead::Endian::eBig)
+    {
+        u32 ret = ReadByte(ptr);
+        ret <<= 8;
+        ret |= ReadByte(ptr);
+        ret <<= 8;
+        ret |= ReadByte(ptr);
+        return ret;
+    }
+    else
+    {
+        u32 ret = ReadByte(ptr);
+        ret |= (ReadByte(ptr) << 8);
+        ret |= (ReadByte(ptr) << 16);
+        return ret;
+    }
 }
 
 s32 MmlParser::ReadVar(const u8** ptr)
