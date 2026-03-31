@@ -319,6 +319,11 @@ void DrawPlayerUI()
                 StopAllSoundPlayers(false);
             }
         }
+    
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNone))
+        {
+            ImGui::SetTooltip("Middle click to kill all Voices");
+        }
 
         ImGui::SameLine();
 
