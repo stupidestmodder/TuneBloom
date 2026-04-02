@@ -1,9 +1,11 @@
-![readmeheader](https://github.com/user-attachments/assets/97fff130-5eb7-4258-b7db-85a90da45555)
-
+<img alt="banner" src="https://github.com/user-attachments/assets/c3d1fa1e-30da-42f7-803f-1a4eb08cacb5" />
 <div align="center">
-  <img src="https://img.shields.io/badge/for-Wii%20U-blue?color=%2302a4c7&style=flat" alt="For Wii U"/>
+  <img alt="wiiu" height="56" src="https://github.com/user-attachments/assets/d9074ba2-455c-4083-b8a8-da9150814065">
   <a href="https://go.nsmbu.net/discord">
-    <img src="https://img.shields.io/discord/800510605785563186?logo=discord&color=%235662f6&style=flat&label=zenith" alt="Discord Link"/>
+    <img alt="discord" height="56" src="https://github.com/user-attachments/assets/9c31e6cc-e2f8-4d53-9507-15a17b368088">
+  </a>
+  <a href="https://zenith.nsmbu.net/wiki/TuneBloom">
+    <img alt="docs" height="56" src="https://github.com/user-attachments/assets/67b764c4-f2d0-470a-8f12-206d3d0203fc">
   </a>
 </div>
 
@@ -24,7 +26,7 @@ TuneBloom is an extremely fast & stable editor for editing NintendoWare audio fo
 ## Credits
 - [STUPID Modder](https://github.com/stupidestmodder) - Development lead
 - [AboodXD](https://github.com/aboood40091) - Research & algorithms
-- [Luminyx1](https://github.com/Luminyx1) - Build system & logo
+- [Luminyx1](https://github.com/Luminyx1) - Build system & testing
 - [Alex Barney](https://github.com/Thealexbarney) - DspTool (Adpcm Encoding)
 - [omar](https://github.com/ocornut) - ImGui
 - [Vladimir Shatrov](https://github.com/frowrik) - ImGui piano keyboard
