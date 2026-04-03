@@ -48,10 +48,11 @@ public:
     void init();
     void deinit(bool stop = false);
     void prepare(s32 index, const PrepareArg& arg, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
-    void prepare(const WaveFile& waveFile, s32 channelIdx = -1, const Sound* sound = nullptr, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
+    void prepare(const WaveFile& waveFile, s32 channelIdx = -1, const Sound* sound = nullptr, u32 startOffsetSample = 0, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
     void setBankNoteInfo(u8 key, u8 velocity, const BankFile::VelocityRegion& velocityRegion);
 
     void pause(bool flag) override;
+    bool seek(u32 offsetSample);
 
     void update();
 
@@ -76,19 +77,26 @@ public:
     }
 
 protected:
+    bool doStartChannel_(u32 startOffsetSample);
+
+protected:
     bool mIsRegisterPlayerCallback;
 
     bool mWavePlayFlag;
     bool mReleasePriorityFixFlag;
+    bool mSetAdshr;
 
     f32 mPanRange;
 
     const void* mWsdFile;
     const void* mWaveFile;
     s32 mWaveSoundIndex;
+    u32 mStartOffset;
 
     nw::snd::internal::WaveSoundInfo mWaveSoundInfo;
     snd::internal::driver::Channel* mChannel;
+
+    nw::snd::internal::WaveInfo mWaveInfo;
 
     snd::UpdateType mUpdateType;
 

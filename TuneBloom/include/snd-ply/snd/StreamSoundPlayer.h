@@ -143,8 +143,12 @@ public:
     void prepare(const Sound::StreamSoundInfo& streamSoundInfo, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
 
     void pause(bool flag) override;
+    bool seek(u32 offsetSample);
 
-    void startPlayer(const nw::snd::internal::WaveInfo* waveInfos);
+    void applyTrackDataInfo();
+    bool allocVoices();
+
+    void startPlayer(const nw::snd::internal::WaveInfo* waveInfos, u32 startOffsetSample);
 
     void update();
     void updateVoiceParams(StreamTrack* track);
@@ -190,6 +194,8 @@ protected:
     u32 mTrackCount;
     StreamChannel mChannels[cStrmChannelNum];
     StreamTrack mTracks[cStrmTrackNum];
+
+    nw::snd::internal::WaveInfo mWaveInfos[cStrmChannelNum];
 
     nw::snd::SoundArchive::StreamTrackInfo mStreamDataInfoTracks[cStrmTrackNum];
 

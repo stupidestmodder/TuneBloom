@@ -130,8 +130,8 @@ bool SaveFile();
 bool SaveFileAs();
 void CloseFile();
 
-void PlaySound(const Sound* sound);
-bool PlayWaveFile(const WaveFile& wave, s32 channel = -1, const Sound* sound = nullptr);
+void PlaySound(const Sound* sound, u32 startOffsetSample = 0);
+bool PlayWaveFile(const WaveFile& wave, s32 channel = -1, const Sound* sound = nullptr, u32 startOffsetSample = 0);
 bool PlayBankNote(u8 key, u8 velocity, const BankFile::VelocityRegion& velocityRegion);
 bool PlaySeqFile(const SequenceFile& seqFile, const sead::SafeString& startLabel, const Bank** bankArray, u8 volume);
 void StopAllSoundPlayers(bool stop = false);

@@ -1,5 +1,6 @@
 #include "snd/MultiVoice.h"
 
+#include "snd/DecodeAdpcm.h"
 #include "snd/Util.h"
 #include "snd/MultiVoiceMgr.h"
 #include "snd/HardwareMgr.h"
@@ -613,7 +614,19 @@ u32 MultiVoice::frameToByte(u32 sample, SampleFormat format)
 
 void MultiVoice::calcOffsetAdpcmParam(AdpcmContext* context, const AdpcmParam& param, u32 offsetSamples, const void* dataAddress)
 {
-    SEAD_ASSERT(false);
+    u32 currentSample = 0;
+    const u8* inputAddress = reinterpret_cast<const u8*>(dataAddress);
+
+    const u32 cDecodeSampleCount = 14; // Decode in 14 sample units.
+    SEAD_ASSERT(offsetSamples % cDecodeSampleCount == 0);
+
+    s16 output[cDecodeSampleCount] = { 0 };
+    while (currentSample < offsetSamples)
+    {
+        DecodeDspAdpcm(currentSample, *context, param, inputAddress, cDecodeSampleCount, output);
+
+        currentSample += cDecodeSampleCount;
+    }
 }
 
 void MultiVoice::appendWaveBuffer(s32 channelIndex, WaveBuffer* buffer, bool lastFlag)

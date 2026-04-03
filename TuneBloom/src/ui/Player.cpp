@@ -79,6 +79,8 @@ void DrawPlayerPropertiesUI()
 
 // Runtime Player
 
+static bool SeekPlayer(f32 progress);
+
 SequenceSoundPlayer sSequencePlayer;
 StreamSoundPlayer sStreamPlayer;
 WaveSoundPlayer sWavePlayer;
@@ -386,7 +388,40 @@ void DrawPlayerUI()
                     progress = 1.0f;
             }
 
+            f32 barStartX = ImGui::GetCursorPosX();
+            ImVec2 barStartScreenPos = ImGui::GetCursorScreenPos();
+
             ImGui::ProgressBar(progress, ImVec2(adjustSize, 0.0f), "");
+
+            static bool sCanSeek = false;
+
+            if (ImGui::IsItemHovered() && sCurrentSoundPlayer != &sSequencePlayer && (sStreamPlayer.isActive() || sWavePlayer.isActive()))
+            {
+                sCanSeek = true;
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            }
+
+            if (sCanSeek && (ImGui::IsMouseClicked(ImGuiMouseButton_Left) || ImGui::IsMouseDragging(ImGuiMouseButton_Left)))
+            {
+                auto normalize = [](f32 min, f32 val, f32 max)
+                {
+                    return (val - min) / (max - min);
+                };
+
+                f32 barEndX = adjustSize + barStartX;
+                f32 mouseX = ImGui::GetMousePos().x - ImGui::GetWindowPos().x;
+                mouseX = sead::Mathf::clamp2(barStartX, mouseX, barEndX);
+
+                progress = normalize(barStartX, mouseX, barEndX);
+
+                SeekPlayer(progress);
+            }
+            else
+            {
+                sCanSeek = false;
+            }
+
+            //ImGui::ProgressBar(progress, ImVec2(adjustSize, 0.0f), "");
 
             if (sCurrentSoundPlayer == &sSequencePlayer)
                 ImGui::PopStyleColor();
@@ -718,7 +753,7 @@ static bool PlayStrmSound(const Sound* sound)
     return true;
 }
 
-static bool PlayWaveSound(const Sound* sound)
+static bool PlayWaveSound(const Sound* sound, u32 startOffsetSample)
 {
     const Item* waveFile = sound->getWaveSoundInfo().getWaveFileRef().getItem();
     if (!waveFile)
@@ -728,14 +763,14 @@ static bool PlayWaveSound(const Sound* sound)
         return false;
     }
 
-    PlayWaveFile(*static_cast<const WaveFile*>(waveFile), -1, sound);
+    PlayWaveFile(*static_cast<const WaveFile*>(waveFile), -1, sound, startOffsetSample);
 
     sSelectedItem = const_cast<Sound*>(sound);
 
     return true;
 }
 
-void PlaySound(const Sound* sound)
+void PlaySound(const Sound* sound, u32 startOffsetSample)
 {
     SEAD_ASSERT(sound);
 
@@ -752,14 +787,20 @@ void PlaySound(const Sound* sound)
             break;
 
         case Sound::SoundType::Wave:
-            PlayWaveSound(sound);
+            PlayWaveSound(sound, startOffsetSample);
             break;
     }
 }
 
-bool PlayWaveFile(const WaveFile& wave, s32 channel, const Sound* sound)
+bool PlayWaveFile(const WaveFile& wave, s32 channel, const Sound* sound, u32 startOffsetSample)
 {
     SEAD_ASSERT(wave.getItemType() == Item::ItemType::WaveFile);
+
+    if (wave.getChannels().isEmpty())
+    {
+        PopupMgr::instance()->addPopup({ "Wave File has no channels", nullptr });
+        return false;
+    }
 
     {
         snd::internal::driver::SoundThreadLock lock;
@@ -775,7 +816,7 @@ bool PlayWaveFile(const WaveFile& wave, s32 channel, const Sound* sound)
 
         sWavePlayer.setVolume(sVolume);
 
-        sWavePlayer.prepare(wave, channel, sound);
+        sWavePlayer.prepare(wave, channel, sound, startOffsetSample);
 
         sCurrentSoundPlayer = &sWavePlayer;
 
@@ -926,4 +967,27 @@ void StopAllVoices()
     snd::internal::driver::SoundThreadLock lock;
 
     snd::internal::driver::MultiVoiceMgr::instance()->stopAllVoices();
+}
+
+static bool SeekPlayer(f32 progress)
+{
+    progress = sead::Mathf::clamp2(0.0f, progress, 1.0f);
+
+    Item* selectedItem = sSelectedItem;
+
+    if (sWavePlayer.isActive())
+    {
+        snd::internal::driver::SoundThreadLock lock;
+        sWavePlayer.seek(sSampleCount * progress);
+    }
+
+    if (sStreamPlayer.isActive())
+    {
+        snd::internal::driver::SoundThreadLock lock;
+        sStreamPlayer.seek(sSampleCount * progress);
+    }
+
+    sSelectedItem = selectedItem;
+
+    return true;
 }

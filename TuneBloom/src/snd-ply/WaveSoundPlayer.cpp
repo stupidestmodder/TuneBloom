@@ -21,6 +21,8 @@ void WaveSoundPlayer::init()
     mWsdFile = nullptr;
     mWaveFile = nullptr;
     mWaveSoundIndex = -1;
+    mStartOffset = 0;
+    mSetAdshr = false;
 
     mUpdateType = snd::UpdateType::AudioFrame;
 
@@ -93,8 +95,9 @@ void WaveSoundPlayer::prepare(s32 index, const PrepareArg& arg, snd::UpdateType 
     mActiveFlag = true;
 }
 
-void WaveSoundPlayer::prepare(const WaveFile& waveFile, s32 channelIdx, const Sound* sound, snd::UpdateType updateType)
+void WaveSoundPlayer::prepare(const WaveFile& waveFile, s32 channelIdx, const Sound* sound, u32 startOffsetSample, snd::UpdateType updateType)
 {
+    mStartOffset = startOffsetSample;
     mUpdateType = updateType;
 
     SEAD_ASSERT(channelIdx < (s32)snd::cWaveChannelMax);
@@ -157,6 +160,31 @@ void WaveSoundPlayer::pause(bool flag)
     }
 }
 
+bool WaveSoundPlayer::seek(u32 offsetSample)
+{
+    if (!mActiveFlag || !mWavePlayFlag || !mChannel)
+    {
+        return false;
+    }
+
+    if (offsetSample > mWaveInfo.loopEndFrame)
+    {
+        offsetSample = mWaveInfo.loopEndFrame;
+    }
+
+    // Free
+    if (mChannel)
+    {
+        mChannel->stop();
+        snd::internal::driver::Channel::detachChannel(mChannel);
+        mChannel = nullptr;
+    }
+
+    doStartChannel_(offsetSample);
+
+    return true;
+}
+
 void WaveSoundPlayer::update()
 {
     if (!mActiveFlag)
@@ -200,15 +228,15 @@ bool WaveSoundPlayer::startChannel(const nw::snd::internal::WaveInfo* waveInfoPt
 
     u32 startOffsetSamples = 0;
 
-    snd::internal::driver::Channel* channel = snd::internal::driver::Channel::allocChannel(
-        sead::Mathi::min(static_cast<s32>(waveInfo.channelCount), 2),
-        snd::internal::Voice::cPriorityNoDrop,
-        &channelCallbackFunc,
-        this
-    );
+    {
+        startOffsetSamples = mStartOffset;
+    }
 
-    if (!channel)
+    // The start offset is outside the range, so exit without playback
+    if (startOffsetSamples > waveInfo.loopEndFrame)
+    {
         return false;
+    }
 
     if (waveInfoPtr)
     {
@@ -243,11 +271,7 @@ bool WaveSoundPlayer::startChannel(const nw::snd::internal::WaveInfo* waveInfoPt
                 mWaveSoundInfo.biquadValue = waveSoundInfo.getBiquadValue();
             }
 
-            channel->setAttack(mWaveSoundInfo.adshr.attack);
-            channel->setHold(mWaveSoundInfo.adshr.hold);
-            channel->setDecay(mWaveSoundInfo.adshr.decay);
-            channel->setSustain(mWaveSoundInfo.adshr.sustain);
-            channel->setRelease(mWaveSoundInfo.adshr.release);
+            mSetAdshr = true;
         }
     }
     else
@@ -258,6 +282,28 @@ bool WaveSoundPlayer::startChannel(const nw::snd::internal::WaveInfo* waveInfoPt
                 return false;
         }
 
+        mSetAdshr = true;
+    }
+
+    mWaveInfo = waveInfo;
+
+    return doStartChannel_(startOffsetSamples);
+}
+
+bool WaveSoundPlayer::doStartChannel_(u32 startOffsetSample)
+{
+    snd::internal::driver::Channel* channel = snd::internal::driver::Channel::allocChannel(
+        sead::Mathi::min(static_cast<s32>(mWaveInfo.channelCount), 2),
+        snd::internal::Voice::cPriorityNoDrop,
+        &channelCallbackFunc,
+        this
+    );
+
+    if (!channel)
+        return false;
+
+    if (mSetAdshr)
+    {
         channel->setAttack(mWaveSoundInfo.adshr.attack);
         channel->setHold(mWaveSoundInfo.adshr.hold);
         channel->setDecay(mWaveSoundInfo.adshr.decay);
@@ -270,9 +316,9 @@ bool WaveSoundPlayer::startChannel(const nw::snd::internal::WaveInfo* waveInfoPt
     channel->setUpdateType(mUpdateType);
 
     snd::internal::WaveInfo waveInfoS;
-    nw::snd::internal::ConvertWaveInfo(&waveInfoS, waveInfo);
+    nw::snd::internal::ConvertWaveInfo(&waveInfoS, mWaveInfo);
 
-    channel->start(waveInfoS, -1, startOffsetSamples);
+    channel->start(waveInfoS, -1, startOffsetSample);
 
     mChannel = channel;
 

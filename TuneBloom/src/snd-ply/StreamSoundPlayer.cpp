@@ -212,59 +212,12 @@ void StreamSoundPlayer::prepare(const void* strmFile, snd::UpdateType updateType
         }
     }
 
-    // ApplyTrackDataInfo
+    applyTrackDataInfo();
+
+    if (!allocVoices())
     {
-        for (u32 i = 0; i < mTrackCount; i++)
-        {
-            const nw::snd::SoundArchive::StreamTrackInfo& trackInfo = mStreamDataInfoTracks[i];
-            mTracks[i].volume = trackInfo.volume;
-            mTracks[i].pan = trackInfo.pan;
-            mTracks[i].span = trackInfo.span;
-            mTracks[i].mainSend = trackInfo.mainSend;
-            for (u32 j = 0; j < nw::snd::AUX_BUS_NUM; j++)
-            {
-                mTracks[i].fxSend[j] = trackInfo.fxSend[j];
-            }
-            mTracks[i].lpfFreq = trackInfo.lpfFreq;
-            mTracks[i].biquadType = trackInfo.biquadType;
-            mTracks[i].biquadValue = trackInfo.biquadValue;
-            mTracks[i].flags = trackInfo.flags;
-            mTracks[i].channelCount = trackInfo.channelCount;
-
-            // Allocates StreamChannel to StreamTrack.
-            for (s32 ch = 0; ch < trackInfo.channelCount; ch++)
-            {
-                s8 globalChannelIndex = trackInfo.globalChannelIndex[ch];
-                SEAD_ASSERT(0 <= globalChannelIndex && globalChannelIndex < cStrmChannelNum);
-
-                mTracks[i].mChannels[ch] = &mChannels[globalChannelIndex];
-            }
-        }
-    }
-
-    for (u32 channelIndex = 0; channelIndex < mChannelCount; channelIndex++)
-    {
-        StreamChannel& channel = mChannels[channelIndex];
-
-        snd::internal::driver::Channel* voice = snd::internal::driver::Channel::allocChannel(1, snd::internal::Voice::cPriorityNoDrop, &channelCallbackFunc, &channel);
-
-        if (!voice)
-        {
-            for (u32 i = 0; i < channelIndex; i++)
-            {
-                StreamChannel& c = mChannels[i];
-                if (c.mVoice)
-                {
-                    c.mVoice->stop();
-                    snd::internal::driver::Channel::detachChannel(c.mVoice);
-                    c.mVoice = nullptr;
-                }
-            }
-
-            return;
-        }
-
-        channel.mVoice = voice;
+        SEAD_PRINT("Failed to alloc voices\n");
+        return;
     }
 
     nw::snd::internal::StreamSoundFile::StreamSoundInfo streamSoundInfo;
@@ -296,10 +249,9 @@ void StreamSoundPlayer::prepare(const void* strmFile, snd::UpdateType updateType
     waveInfo.loopEndFrame = streamSoundInfo.frameCount;
     waveInfo.originalLoopStartFrame = streamSoundInfo.originalLoopStart;
 
-    nw::snd::internal::WaveInfo waveInfos[cStrmChannelNum];
     for (u32 i = 0; i < waveInfo.channelCount; i++)
     {
-        waveInfos[i] = waveInfo;
+        mWaveInfos[i] = waveInfo;
     }
 
     {
@@ -346,7 +298,7 @@ void StreamSoundPlayer::prepare(const void* strmFile, snd::UpdateType updateType
 
         for (u32 i = 0; i < waveInfo.channelCount; i++)
         {
-            nw::snd::internal::WaveInfo& info = waveInfos[i];
+            nw::snd::internal::WaveInfo& info = mWaveInfos[i];
             info.channelCount = 1;
 
             nw::snd::internal::WaveInfo::ChannelParam& channelParam = info.channelParam[0];
@@ -359,7 +311,7 @@ void StreamSoundPlayer::prepare(const void* strmFile, snd::UpdateType updateType
         }
     }
 
-    startPlayer(waveInfos);
+    startPlayer(mWaveInfos, 0);
 
     mSampleRate = streamSoundInfo.sampleRate;
     mSampleCount = streamSoundInfo.frameCount;
@@ -381,59 +333,12 @@ void StreamSoundPlayer::prepare(const Sound::StreamSoundInfo& streamSoundInfo, s
 
     mUpdateType = updateType;
 
-    // ApplyTrackDataInfo
+    applyTrackDataInfo();
+
+    if (!allocVoices())
     {
-        for (u32 i = 0; i < mTrackCount; i++)
-        {
-            const nw::snd::SoundArchive::StreamTrackInfo& trackInfo = mStreamDataInfoTracks[i];
-            mTracks[i].volume = trackInfo.volume;
-            mTracks[i].pan = trackInfo.pan;
-            mTracks[i].span = trackInfo.span;
-            mTracks[i].mainSend = trackInfo.mainSend;
-            for (u32 j = 0; j < nw::snd::AUX_BUS_NUM; j++)
-            {
-                mTracks[i].fxSend[j] = trackInfo.fxSend[j];
-            }
-            mTracks[i].lpfFreq = trackInfo.lpfFreq;
-            mTracks[i].biquadType = trackInfo.biquadType;
-            mTracks[i].biquadValue = trackInfo.biquadValue;
-            mTracks[i].flags = trackInfo.flags;
-            mTracks[i].channelCount = trackInfo.channelCount;
-
-            // Allocates StreamChannel to StreamTrack.
-            for (s32 ch = 0; ch < trackInfo.channelCount; ch++)
-            {
-                s8 globalChannelIndex = trackInfo.globalChannelIndex[ch];
-                SEAD_ASSERT(0 <= globalChannelIndex && globalChannelIndex < cStrmChannelNum);
-
-                mTracks[i].mChannels[ch] = &mChannels[globalChannelIndex];
-            }
-        }
-    }
-
-    for (u32 channelIndex = 0; channelIndex < mChannelCount; channelIndex++)
-    {
-        StreamChannel& channel = mChannels[channelIndex];
-
-        snd::internal::driver::Channel* voice = snd::internal::driver::Channel::allocChannel(1, snd::internal::Voice::cPriorityNoDrop, &channelCallbackFunc, &channel);
-
-        if (!voice)
-        {
-            for (u32 i = 0; i < channelIndex; i++)
-            {
-                StreamChannel& c = mChannels[i];
-                if (c.mVoice)
-                {
-                    c.mVoice->stop();
-                    snd::internal::driver::Channel::detachChannel(c.mVoice);
-                    c.mVoice = nullptr;
-                }
-            }
-
-            return;
-        }
-
-        channel.mVoice = voice;
+        SEAD_PRINT("Failed to alloc voices\n");
+        return;
     }
 
     const WaveFile::Channel* channels[cStrmChannelNum];
@@ -471,15 +376,14 @@ void StreamSoundPlayer::prepare(const Sound::StreamSoundInfo& streamSoundInfo, s
     waveInfo.loopEndFrame = mainWave.getLoopEndFrame();
     waveInfo.originalLoopStartFrame = mainWave.getOriginalLoopStartFrame();
 
-    nw::snd::internal::WaveInfo waveInfos[cStrmChannelNum];
     for (u32 i = 0; i < waveInfo.channelCount; i++)
     {
-        waveInfos[i] = waveInfo;
+        mWaveInfos[i] = waveInfo;
     }
 
     {
         u32 sampleSize = waveInfo.sampleFormat == nw::snd::SAMPLE_FORMAT_PCM_S16 ? sizeof(s16) : sizeof(u8);
-        u32 bufferSize = mainWave.getLoopEndFrame() * sampleSize;
+        u32 bufferSize = mainWave.getLoopEndFrame(false) * sampleSize;
 
         u8* channelBuffers[cStrmChannelNum];
         for (u32 i = 0; i < waveInfo.channelCount; i++)
@@ -507,7 +411,7 @@ void StreamSoundPlayer::prepare(const Sound::StreamSoundInfo& streamSoundInfo, s
 
         for (u32 i = 0; i < waveInfo.channelCount; i++)
         {
-            nw::snd::internal::WaveInfo& info = waveInfos[i];
+            nw::snd::internal::WaveInfo& info = mWaveInfos[i];
             info.channelCount = 1;
 
             nw::snd::internal::WaveInfo::ChannelParam& channelParam = info.channelParam[0];
@@ -537,7 +441,7 @@ void StreamSoundPlayer::prepare(const Sound::StreamSoundInfo& streamSoundInfo, s
         }
     }
 
-    startPlayer(waveInfos);
+    startPlayer(mWaveInfos, 0);
 
     mSampleRate = mainWave.getSampleRate();
     mSampleCount = mainWave.getSampleCount();
@@ -565,7 +469,101 @@ void StreamSoundPlayer::pause(bool flag)
     }
 }
 
-void StreamSoundPlayer::startPlayer(const nw::snd::internal::WaveInfo* waveInfos)
+bool StreamSoundPlayer::seek(u32 offsetSample)
+{
+    if (!mActiveFlag || !mSetup || !mPrepared)
+    {
+        return false;
+    }
+
+    if (offsetSample > mWaveInfos[0].loopEndFrame)
+    {
+        offsetSample = mWaveInfos[0].loopEndFrame;
+    }
+
+    for (u32 ch = 0; ch < mChannelCount; ch++)
+    {
+        snd::internal::driver::Channel* voice = mChannels[ch].mVoice;
+        if (voice)
+        {
+            voice->stop();
+            snd::internal::driver::Channel::detachChannel(voice);
+            mChannels[ch].mVoice = nullptr;
+        }
+    }
+
+    if (!allocVoices())
+    {
+        SEAD_PRINT("Failed to alloc voices\n");
+        return false;
+    }
+
+    startPlayer(mWaveInfos, offsetSample);
+
+    return true;
+}
+
+void StreamSoundPlayer::applyTrackDataInfo()
+{
+    for (u32 i = 0; i < mTrackCount; i++)
+    {
+        const nw::snd::SoundArchive::StreamTrackInfo& trackInfo = mStreamDataInfoTracks[i];
+        mTracks[i].volume = trackInfo.volume;
+        mTracks[i].pan = trackInfo.pan;
+        mTracks[i].span = trackInfo.span;
+        mTracks[i].mainSend = trackInfo.mainSend;
+        for (u32 j = 0; j < nw::snd::AUX_BUS_NUM; j++)
+        {
+            mTracks[i].fxSend[j] = trackInfo.fxSend[j];
+        }
+        mTracks[i].lpfFreq = trackInfo.lpfFreq;
+        mTracks[i].biquadType = trackInfo.biquadType;
+        mTracks[i].biquadValue = trackInfo.biquadValue;
+        mTracks[i].flags = trackInfo.flags;
+        mTracks[i].channelCount = trackInfo.channelCount;
+
+        // Allocates StreamChannel to StreamTrack.
+        for (s32 ch = 0; ch < trackInfo.channelCount; ch++)
+        {
+            s8 globalChannelIndex = trackInfo.globalChannelIndex[ch];
+            SEAD_ASSERT(0 <= globalChannelIndex && globalChannelIndex < cStrmChannelNum);
+
+            mTracks[i].mChannels[ch] = &mChannels[globalChannelIndex];
+        }
+    }
+}
+
+bool StreamSoundPlayer::allocVoices()
+{
+    for (u32 channelIndex = 0; channelIndex < mChannelCount; channelIndex++)
+    {
+        StreamChannel& channel = mChannels[channelIndex];
+
+        snd::internal::driver::Channel* voice = snd::internal::driver::Channel::allocChannel(1, snd::internal::Voice::cPriorityNoDrop, &channelCallbackFunc, &channel);
+
+        if (!voice)
+        {
+            for (u32 i = 0; i < channelIndex; i++)
+            {
+                StreamChannel& c = mChannels[i];
+                if (c.mVoice)
+                {
+                    c.mVoice->stop();
+                    snd::internal::driver::Channel::detachChannel(c.mVoice);
+                    c.mVoice = nullptr;
+                }
+            }
+
+            return false;
+        }
+
+        channel.mVoice = voice;
+    }
+
+    return true;
+}
+
+void StreamSoundPlayer::startPlayer(const nw::snd::internal::WaveInfo* waveInfos, u32 startOffsetSample)
 {
     for (u32 trackIndex = 0; trackIndex < mTrackCount; trackIndex++)
     {
@@ -591,7 +589,7 @@ void StreamSoundPlayer::startPlayer(const nw::snd::internal::WaveInfo* waveInfos
                 nw::snd::internal::ConvertWaveInfo(&waveInfoS, waveInfo);
 
                 voice->setUpdateType(mUpdateType);
-                voice->start(waveInfoS, -1, 0);
+                voice->start(waveInfoS, -1, startOffsetSample);
             }
         }
     }

@@ -358,7 +358,7 @@ void Channel::initParam(ChannelCallback callback, void* callbackData)
     mInstrumentVolume = 1.0f;
     mVelocity = 1.0f;
 
-    //mUseContextInfo = false;
+    mUseContextInfo = false;
 }
 
 void Channel::appendWaveBuffer(const WaveInfo& waveInfo, u32 startOffsetSamples)
@@ -425,13 +425,15 @@ void Channel::appendWaveBuffer(const WaveInfo& waveInfo, u32 startOffsetSamples)
                     adpcmContext.yn1 = pParam->yn1;
                     adpcmContext.yn2 = pParam->yn2;
 
-                    // Decode partway on own effort (because normally it is the DSP doing the decoding, for this portion, the CPU takes the load).
-                    MultiVoice::calcOffsetAdpcmParam(
-                        &adpcmContext,
-                        param,
-                        startOffsetSamples,
-                        originalDataAddress
-                    );
+                    //? We are not going to decode for the startOffsetSamples as it's quite expensive to calculate for big streams
+                    //? Probable an audible pop will occur but who cares when seeking right ???
+                    // // Decode partway on own effort (because normally it is the DSP doing the decoding, for this portion, the CPU takes the load).
+                    // MultiVoice::calcOffsetAdpcmParam(
+                    //     &adpcmContext,
+                    //     param,
+                    //     startOffsetSamples,
+                    //     originalDataAddress
+                    // );
                 }
             }
 
