@@ -226,7 +226,7 @@ public:
 
     u32 getVersionForBfwsd() const
     {
-        if (mVersion > 0x00020000)
+        if (mVersion >= 0x00020100)
             return 0x00010100;
 
         return 0x00010000;
