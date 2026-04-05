@@ -965,22 +965,13 @@ bool WaveFile::writeWavFile(const sead::SafeString& path, s32 channelIdx)
         {
             const WaveFile::Channel* channel = mChannels.nth(channelIdx == -1 ? ch : channelIdx);
 
-            const snd::DspAdpcmParam& dspAdpcmParam = channel->getAdpcmParam();
+            ADPCMINFO adpcmInfo;
+            sead::MemUtil::fillZero(&adpcmInfo, sizeof(adpcmInfo));
 
-            snd::AdpcmContext adpcmContext;
-            adpcmContext.pred_scale = dspAdpcmParam.predScale;
-            adpcmContext.yn1 = dspAdpcmParam.yn1;
-            adpcmContext.yn2 = dspAdpcmParam.yn2;
-
-            snd::AdpcmParam adpcmParam;
-            for (u32 i = 0; i < 8; i++)
-            {
-                adpcmParam.coef[i][0] = dspAdpcmParam.coef[i][0];
-                adpcmParam.coef[i][1] = dspAdpcmParam.coef[i][1];
-            }
+            FillAdpcmInfo(&adpcmInfo, channel->getAdpcmParam(), channel->getAdpcmLoopParam());
 
             s16* data = new s16[mSampleCount];
-            snd::internal::DecodeDspAdpcm(0, adpcmContext, adpcmParam, channel->getData(), mSampleCount, data);
+            decode((u8*)channel->getData(), data, &adpcmInfo, mSampleCount);
 
             channels[ch] = data;
         }
@@ -1211,15 +1202,7 @@ void* WaveFile::convert_(
         u8* src = static_cast<u8*>(dataSrc);
         s16* dst = new s16[samples];
 
-        snd::AdpcmContext adpcmContext;
-        adpcmContext.pred_scale = adpcmInfo->pred_scale;
-        adpcmContext.yn1 = adpcmInfo->yn1;
-        adpcmContext.yn2 = adpcmInfo->yn2;
-
-        snd::AdpcmParam adpcmParam;
-        FillAdpcmParam(&adpcmParam, *adpcmInfo);
-
-        snd::internal::DecodeDspAdpcm(0, adpcmContext, adpcmParam, src, samples, dst);
+        decode(src, dst, adpcmInfo, samples);
 
         delete[] src;
 
