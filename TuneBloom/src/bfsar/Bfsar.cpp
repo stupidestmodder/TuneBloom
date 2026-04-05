@@ -5035,10 +5035,24 @@ bool Bfsar::readStreamWaves_(const Sound* sound, const void* strmFile, Sound::St
                 channel->mAdpcmParam.predScale = adpcmParam.predScale;
                 channel->mAdpcmParam.yn1 = adpcmParam.yn1;
                 channel->mAdpcmParam.yn2 = adpcmParam.yn2;
+                sead::MemUtil::copy(&channel->mAdpcmParamStream, &channel->mAdpcmParam, sizeof(snd::DspAdpcmParam));
 
                 channel->mAdpcmLoopParam.loopPredScale = adpcmLoopParam.loopPredScale;
                 channel->mAdpcmLoopParam.loopYn1 = adpcmLoopParam.loopYn1;
                 channel->mAdpcmLoopParam.loopYn2 = adpcmLoopParam.loopYn2;
+                sead::MemUtil::copy(&channel->mAdpcmLoopParamStream, &channel->mAdpcmLoopParam, sizeof(snd::internal::DspAdpcmLoopParam));
+
+                WaveFile::Channel::SeekInfo* seekInfo = new WaveFile::Channel::SeekInfo[streamSoundInfo.blockCount];
+                channel->mSeekInfo = seekInfo;
+                channel->mSeekInfoBlocks = streamSoundInfo.blockCount;
+                for (u32 blockNo = 0; blockNo < streamSoundInfo.blockCount; blockNo++)
+                {
+                    const u8* seekStart = (u8*)strmFile + reader.GetSeekBlockOffset() + sizeof(nw::ut::BinaryBlockHeader);
+                    const WaveFile::Channel::SeekInfo* blockSeek = (WaveFile::Channel::SeekInfo*)seekStart;
+                    blockSeek += blockNo * streamSoundInfo.channelCount;
+                    seekInfo[blockNo].yn1 = blockSeek[globalChannelIndex].yn1;
+                    seekInfo[blockNo].yn2 = blockSeek[globalChannelIndex].yn2;
+                }
             }
         }
 

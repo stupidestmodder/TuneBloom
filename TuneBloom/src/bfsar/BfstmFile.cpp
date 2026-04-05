@@ -212,7 +212,7 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
                     const WaveFile::Channel& channel = *channels[i];
 
                     {
-                        const snd::DspAdpcmParam& adpcmParam = channel.getAdpcmParam();
+                        const snd::DspAdpcmParam& adpcmParam = channel.getAdpcmParam(true);
 
                         for (u32 j = 0; j < 8; j++)
                         {
@@ -226,7 +226,7 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
                     }
 
                     {
-                        const snd::internal::DspAdpcmLoopParam& adpcmLoopParam = channel.getAdpcmLoopParam();
+                        const snd::internal::DspAdpcmLoopParam& adpcmLoopParam = channel.getAdpcmLoopParam(true);
 
                         stream.writeU16(adpcmLoopParam.loopPredScale);
                         stream.writeU16(adpcmLoopParam.loopYn1);
@@ -253,70 +253,17 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
     {
         writer.openBlock(nw::snd::internal::ElementType_StreamSoundFile_SeekBlock, "SEEK");
 
-        // TODO: Remove this when caching seek info in WaveFile
-        s16* channelsPcm[cStrmChannelNum];
-        for (u32 i = 0; i < cStrmChannelNum; i++)
-        {
-            if (i < channelNum)
-            {
-                const WaveFile::Channel& channel = *channels[i];
-
-                const snd::DspAdpcmParam& dspAdpcmParam = channel.getAdpcmParam();
-
-                snd::AdpcmContext adpcmContext;
-                adpcmContext.pred_scale = dspAdpcmParam.predScale;
-                adpcmContext.yn1 = dspAdpcmParam.yn1;
-                adpcmContext.yn2 = dspAdpcmParam.yn2;
-
-                snd::AdpcmParam adpcmParam;
-                for (u32 i = 0; i < 8; i++)
-                {
-                    adpcmParam.coef[i][0] = dspAdpcmParam.coef[i][0];
-                    adpcmParam.coef[i][1] = dspAdpcmParam.coef[i][1];
-                }
-
-                // TODO: Handle channels smaller than mainWave
-                s16* data = new s16[mainWave.getSampleCount()];
-                snd::internal::DecodeDspAdpcm(0, adpcmContext, adpcmParam, channel.getData(), mainWave.getSampleCount(), data);
-
-                channelsPcm[i] = data;
-            }
-            else
-            {
-                channelsPcm[i] = nullptr;
-            }
-        }
-
         for (u32 blockNo = 0; blockNo < blockNum; blockNo++)
         {
             for (u32 ch = 0; ch < channelNum; ch++)
             {
                 const WaveFile::Channel& channel = *channels[ch];
 
-                if (blockNo == 0)
-                {
-                    stream.writeS16(0);
-                    stream.writeS16(0);
-                }
-                else
-                {
-                    s16* pcm = channelsPcm[ch];
+                s16 s1 = sead::Endian::fromHostS16(sead::Endian::eLittle, channel.getSeekInfo(blockNo).yn1);
+                s16 s2 = sead::Endian::fromHostS16(sead::Endian::eLittle, channel.getSeekInfo(blockNo).yn2);
 
-                    s16 s1 = sead::Endian::fromHostS16(sead::Endian::eLittle, pcm[blockNo * samplePerBlock - 1]);
-                    s16 s2 = sead::Endian::fromHostS16(sead::Endian::eLittle, pcm[blockNo * samplePerBlock - 2]);
-
-                    stream.writeMemBlock(&s1, sizeof(s16));
-                    stream.writeMemBlock(&s2, sizeof(s16));
-                }
-            }
-        }
-
-        for (u32 i = 0; i < cStrmChannelNum; i++)
-        {
-            if (channelsPcm[i])
-            {
-                delete[] channelsPcm[i];
-                channelsPcm[i] = nullptr;
+                stream.writeMemBlock(&s1, sizeof(s16));
+                stream.writeMemBlock(&s2, sizeof(s16));
             }
         }
 

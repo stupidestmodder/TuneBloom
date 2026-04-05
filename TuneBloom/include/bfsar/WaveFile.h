@@ -23,14 +23,30 @@ public:
     class Channel
     {
     public:
+        struct SeekInfo
+        {
+            SeekInfo(s16 s1 = 0, s16 s2 = 0)
+                : yn1(s1), yn2(s2)
+            {
+            }
+
+            s16 yn1;
+            s16 yn2;
+        };
+
+    public:
         Channel()
             : mOwnsData(false)
             , mData(nullptr)
             , mDataSize(0)
             , mOriginalDataOffset(0)
+            , mSeekInfo(nullptr)
+            , mSeekInfoBlocks(0)
         {
             sead::MemUtil::fillZero(&mAdpcmParam, sizeof(mAdpcmParam));
             sead::MemUtil::fillZero(&mAdpcmLoopParam, sizeof(mAdpcmLoopParam));
+            sead::MemUtil::fillZero(&mAdpcmParamStream, sizeof(mAdpcmParamStream));
+            sead::MemUtil::fillZero(&mAdpcmLoopParamStream, sizeof(mAdpcmLoopParamStream));
         }
 
         ~Channel();
@@ -45,18 +61,29 @@ public:
             return mDataSize;
         }
 
-        const snd::DspAdpcmParam& getAdpcmParam() const
+        const snd::DspAdpcmParam& getAdpcmParam(bool forStream = false) const
         {
-            return mAdpcmParam;
+            return forStream ? mAdpcmParamStream : mAdpcmParam;
         }
 
-        const snd::internal::DspAdpcmLoopParam& getAdpcmLoopParam() const
+        const snd::internal::DspAdpcmLoopParam& getAdpcmLoopParam(bool forStream = false) const
         {
-            return mAdpcmLoopParam;
+            return forStream ? mAdpcmLoopParamStream : mAdpcmLoopParam;
+
+        const SeekInfo& getSeekInfo(u32 blockNo) const
+        {
+            if (blockNo < mSeekInfoBlocks)
+                return mSeekInfo[blockNo];
+
+        }
+
+        {
+            return mSeekInfoBlocks;
         }
 
     private:
         void dispose_();
+        void freeSeekInfo_();
 
     private:
         bool mOwnsData;
@@ -66,6 +93,12 @@ public:
 
         snd::DspAdpcmParam mAdpcmParam;
         snd::internal::DspAdpcmLoopParam mAdpcmLoopParam;
+
+        snd::DspAdpcmParam mAdpcmParamStream;
+        snd::internal::DspAdpcmLoopParam mAdpcmLoopParamStream;
+
+        SeekInfo* mSeekInfo;
+        u32 mSeekInfoBlocks;
 
         friend class Bfsar;
         friend class WaveFile;
@@ -192,9 +225,15 @@ private:
         mUseOriginalData = false;
     }
 
-    void updateLoopInfo_();
+    void buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel& channel);
 
-    static void* convert_(void* data, sead::Endian::Types dataEndian, u32 samples, Encoding from, Encoding to, u32* size, ADPCMINFO* adpcmInfo, u32 loopSample);
+    void updateLoopInfo_(bool skipStream);
+
+    static void* convert_(
+        void* data, sead::Endian::Types dataEndian, u32 samples,
+        Encoding from, Encoding to, u32* size,
+        ADPCMINFO* adpcmInfo, ADPCMINFO* adpcmInfoStream,
+        u32 loopSample, u32 loopSampleStream);
 
 private:
     sead::Endian::Types mDataEndian; //? For when Encoding is Pcm16
