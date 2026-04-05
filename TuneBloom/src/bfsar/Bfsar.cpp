@@ -4984,7 +4984,14 @@ bool Bfsar::readStreamWaves_(const Sound* sound, const void* strmFile, Sound::St
         wave->mId = mWaveFileList.size();
 
         wave->mEnableName = true;
-        wave->mName.format("GUESS_%s_TRACK_%u", sound->getName().cstr(), trackNo);
+        if (tracks.size() == 1)
+        {
+            wave->mName.format("GUESS_%s", sound->getName().cstr());
+        }
+        else
+        {
+            wave->mName.format("GUESS_%s_TRACK_%u", sound->getName().cstr(), trackNo);
+        }
 
         wave->mVersion = 0x00010200;
         wave->mDataEndian = nw::ut::GetFileEndian(*reader.mHeader);
