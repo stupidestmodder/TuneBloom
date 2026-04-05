@@ -69,14 +69,18 @@ public:
         const snd::internal::DspAdpcmLoopParam& getAdpcmLoopParam(bool forStream = false) const
         {
             return forStream ? mAdpcmLoopParamStream : mAdpcmLoopParam;
+        }
 
         const SeekInfo& getSeekInfo(u32 blockNo) const
         {
             if (blockNo < mSeekInfoBlocks)
                 return mSeekInfo[blockNo];
 
+            static const SeekInfo cNullSeekInfo;
+            return cNullSeekInfo;
         }
 
+        u32 getSeekInfoBlocks() const
         {
             return mSeekInfoBlocks;
         }
