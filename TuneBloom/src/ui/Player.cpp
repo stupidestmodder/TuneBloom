@@ -430,84 +430,12 @@ void DrawPlayerUI()
             }
             ImGui::PopStyleColor();
         }
+    }
+    ImGui::End();
 
-        // ImGui::SeparatorText("Temp");
-
-        // //if (false)
-        // {
-        //     snd::internal::driver::SoundThreadLock lock;
-
-        //     if (sCurrentSoundPlayer)
-        //     {
-        //         f32 pitch = sCurrentSoundPlayer->getPitch();
-        //         if (ImGui::DragFloat("Pitch", &pitch, 0.01f, 0.01f, 4.0f))
-        //         {
-        //             sCurrentSoundPlayer->setPitch(pitch);
-        //         }
-
-        //         f32 lpf = sCurrentSoundPlayer->getLpfFreq();
-        //         if (ImGui::DragFloat("LPF", &lpf, 0.01f, -1.0f, 0.0f))
-        //         {
-        //             sCurrentSoundPlayer->setLpfFreq(lpf);
-        //         }
-
-        //         static const char* sBiquadTypes[] = {
-        //             "Inherit",
-        //             "None",
-        //             "Lpf",
-        //             "Hpf",
-        //             "Bpf512",
-        //             "Bpf1024",
-        //             "Bpf2048"
-        //         };
-
-        //         s32 biquadType = sCurrentSoundPlayer->getBiquadFilterType() + 1;
-        //         if (ImGui::Combo("Biquad Type", (s32*)&biquadType, sBiquadTypes, IM_ARRAYSIZE(sBiquadTypes)))
-        //         {
-        //             sCurrentSoundPlayer->setBiquadFilter(biquadType - 1, sCurrentSoundPlayer->getBiquadFilterValue());
-        //         }
-
-        //         f32 biquadValue = sCurrentSoundPlayer->getBiquadFilterValue();
-        //         if (ImGui::DragFloat("Biquad Value", &biquadValue, 0.01f, 0.0f, 1.0f))
-        //         {
-        //             sCurrentSoundPlayer->setBiquadFilter(sCurrentSoundPlayer->getBiquadFilterType(), biquadValue);
-        //         }
-        //     }
-
-        //     if (sStreamPlayer.isActive())
-        //     {
-        //         for (u32 i = 0; i < sStreamPlayer.getTrackCount(); i++)
-        //         {
-        //             f32 volume = sStreamPlayer.getPlayerTrack(i)->mVolume;
-        //             if (ImGui::DragFloat(sead::FormatFixedSafeString<32>("Track%d Volume", i).cstr(), &volume, 0.01f, 0.0f, 2.0f))
-        //             {
-        //                 sStreamPlayer.setTrackVolume(1 << i, volume);
-        //             }
-        //         }
-        //     }
-
-        //     if (sSequencePlayer.isActive())
-        //     {
-        //         f32 tempoRatio = sSequencePlayer.getTempoRatio();
-        //         if (ImGui::DragFloat("TempoRatio", &tempoRatio, 0.01f, 0.0f, sead::Mathf::maxNumber()))
-        //         {
-        //             sSequencePlayer.setTempoRatio(tempoRatio);
-        //         }
-
-        //         for (u32 i = 0; i < SequenceSoundPlayer::cTrackNumPerPlayer; i++)
-        //         {
-        //             SequenceTrack* track = sSequencePlayer.getPlayerTrack(i);
-        //             if (!track)
-        //                 continue;
-
-        //             f32 volume = track->getVolume();
-        //             if (ImGui::DragFloat(sead::FormatFixedSafeString<32>("Track%d Volume", i).cstr(), &volume, 0.01f, 0.0f, 2.0f))
-        //             {
-        //                 track->setVolume(volume);
-        //             }
-        //         }
-        //     }
-        // }
+    if (ImGui::Begin(ICON_LC_SETTINGS_2 " Player Parameters###PlayerParamWindow"))
+    {
+        sSoundPlayer.drawParameters();
     }
     ImGui::End();
 }

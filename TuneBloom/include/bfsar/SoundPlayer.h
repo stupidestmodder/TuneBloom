@@ -8,13 +8,27 @@
 class SoundPlayer
 {
 public:
+    static const u32 cMaxTracks = 16;
+
+public:
     SoundPlayer()
         : mVolume(1.0f)
+        , mPitch(1.0f)
+        , mPan(0.0f)
+        , mLPF(0.0f)
+        , mBiquadType(0)
+        , mBiquadValue(0.0f)
+        , mSeqTempoRatio(1.0f)
+
         , mLastPlayedSound(nullptr)
         , mCurrentPlayer(nullptr)
         , mSampleRate(0)
         , mSampleCount(0)
     {
+        for (u32 i = 0; i < cMaxTracks; i++)
+        {
+            mTrackVolume[i] = 1.0f;
+        }
     }
 
     ~SoundPlayer()
@@ -79,8 +93,21 @@ public:
         return isCurrentPlayer() && mCurrentPlayer->isActive();
     }
 
+    void drawParameters();
+
+private:
+    void initPlayerParam_();
+
 private:
     f32 mVolume;
+    f32 mPitch;
+    f32 mPan;
+    f32 mLPF;
+    s32 mBiquadType;
+    f32 mBiquadValue;
+    f32 mTrackVolume[cMaxTracks];
+    f32 mSeqTempoRatio;
+
     const Sound* mLastPlayedSound;
     BasicSoundPlayer* mCurrentPlayer;
     u32 mSampleRate;

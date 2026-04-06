@@ -6,6 +6,8 @@
 #include <snd/MultiVoiceMgr.h>
 #include <snd/SoundSystem.h>
 
+#include <imgui/imgui.h>
+
 void SoundPlayer::stopAllPlayers(bool stop)
 {
     snd::internal::driver::SoundThreadLock lock;
@@ -236,14 +238,13 @@ bool SoundPlayer::playStrmSound(const Sound* sound)
         stopAllPlayersWithoutLock(false);
 
         mStreamPlayer.init();
+        mCurrentPlayer = &mStreamPlayer;
 
         mStreamPlayer.setInitialVolume(static_cast<f32>(sound->getVolume()) / 127.0f);
-        mStreamPlayer.setVolume(mVolume);
+        initPlayerParam_();
 
         mStreamPlayer.setup(setupArg);
         mStreamPlayer.prepare(strmSoundInfo);
-
-        mCurrentPlayer = &mStreamPlayer;
 
         mSampleCount = mStreamPlayer.getSampleCount();
         mSampleRate = mStreamPlayer.getSampleRate();
@@ -324,14 +325,13 @@ bool SoundPlayer::playSeqFile(const SequenceFile& seqFile, const sead::SafeStrin
         stopAllPlayersWithoutLock(false);
 
         mSequencePlayer.init();
+        mCurrentPlayer = &mSequencePlayer;
 
         mSequencePlayer.setInitialVolume(static_cast<f32>(volume) / 127.0f);
-        mSequencePlayer.setVolume(mVolume);
+        initPlayerParam_();
 
         mSequencePlayer.setup(allocTracks, &mSequenceNoteOnCallback2);
         mSequencePlayer.prepare(seqFile, startOffset, banks);
-
-        mCurrentPlayer = &mSequencePlayer;
 
         mSampleCount = 0;
         mSampleRate = 0;
@@ -377,17 +377,16 @@ bool SoundPlayer::playWaveFile(const WaveFile& wave, s32 channel, const Sound* s
         stopAllPlayersWithoutLock(false);
 
         mWavePlayer.init();
+        mCurrentPlayer = &mWavePlayer;
 
         if (sound)
         {
             mWavePlayer.setInitialVolume(static_cast<f32>(sound->getVolume()) / 127.0f);
         }
 
-        mWavePlayer.setVolume(mVolume);
+        initPlayerParam_();
 
         mWavePlayer.prepare(wave, channel, sound, startOffsetSample);
-
-        mCurrentPlayer = &mWavePlayer;
 
         mSampleCount = mWavePlayer.getSampleCount();
         mSampleRate = mWavePlayer.getSampleRate();
@@ -410,13 +409,12 @@ bool SoundPlayer::playBankNote(u8 key, u8 velocity, const BankFile::VelocityRegi
     stopAllPlayersWithoutLock(false);
 
     mWavePlayer.init();
+    mCurrentPlayer = &mWavePlayer;
 
-    mWavePlayer.setVolume(mVolume);
+    initPlayerParam_();
 
     mWavePlayer.prepare(*static_cast<const WaveFile*>(waveFile));
     mWavePlayer.setBankNoteInfo(key, velocity, velocityRegion);
-
-    mCurrentPlayer = &mWavePlayer;
 
     mSampleCount = mWavePlayer.getSampleCount();
     mSampleRate = mWavePlayer.getSampleRate();
@@ -499,4 +497,170 @@ s32 SoundPlayer::getPlaySamplePosition() const
     }
 
     return currentSample;
+}
+
+void SoundPlayer::drawParameters()
+{
+    HelpMarker("Those are not reset when you play a Sound !");
+
+    if (ImGui::BeginTabBar("Params"))
+    {
+        if (ImGui::BeginTabItem("Basic"))
+        {
+            bool hasPlayer = isCurrentPlayer();
+
+            if (ImGui::DragFloat("Volume", &mVolume, 0.01f, 0.0f, 4.0f) && hasPlayer)
+            {
+                snd::internal::driver::SoundThreadLock lock;
+                mCurrentPlayer->setVolume(mVolume);
+            }
+
+            if (ImGui::DragFloat("Pitch", &mPitch, 0.01f, 0.01f, 4.0f) && hasPlayer)
+            {
+                snd::internal::driver::SoundThreadLock lock;
+                mCurrentPlayer->setPitch(mPitch);
+            }
+
+            if (ImGui::DragFloat("Pan", &mPan, 0.01f, -2.0f, 2.0f) && hasPlayer)
+            {
+                snd::internal::driver::SoundThreadLock lock;
+                mCurrentPlayer->setPan(mPan);
+            }
+
+            if (ImGui::DragFloat("LPF Frequency", &mLPF, 0.01f, -1.0f, 0.0f) && hasPlayer)
+            {
+                snd::internal::driver::SoundThreadLock lock;
+                mCurrentPlayer->setLpfFreq(mLPF);
+            }
+
+            static const char* sBiquadTypes[] = {
+                "Inherit",
+                "None",
+                "Lpf",
+                "Hpf",
+                "Bpf512",
+                "Bpf1024",
+                "Bpf2048"
+            };
+
+            s32 biquadType = mBiquadType + 1;
+            if (ImGui::Combo("Biquad Filter Type", (s32*)&biquadType, sBiquadTypes, IM_ARRAYSIZE(sBiquadTypes)) && hasPlayer)
+            {
+                snd::internal::driver::SoundThreadLock lock;
+                mCurrentPlayer->setBiquadFilter(biquadType - 1, mCurrentPlayer->getBiquadFilterValue());
+            }
+            mBiquadType = biquadType - 1;
+
+            if (ImGui::DragFloat("Biquad Filter Value", &mBiquadValue, 0.01f, 0.0f, 1.0f) && hasPlayer)
+            {
+                snd::internal::driver::SoundThreadLock lock;
+                mCurrentPlayer->setBiquadFilter(mCurrentPlayer->getBiquadFilterType(), mBiquadValue);
+            }
+
+            ImGui::Separator();
+
+            bool disable = isActive() && !isCurrentPlayerSequence();
+            if (disable)
+            {
+                ImGui::BeginDisabled();
+            }
+
+            if (ImGui::DragFloat("Sequence Tempo Ratio", &mSeqTempoRatio, 0.01f, 0.0f, sead::Mathf::maxNumber()))
+            {
+                mSequencePlayer.setTempoRatio(mSeqTempoRatio);
+            }
+
+            if (disable)
+            {
+                ImGui::EndDisabled();
+            }
+
+            // TODO: More ?
+
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Track"))
+        {
+            for (u32 i = 0; i < cMaxTracks; i++)
+            {
+                bool isStream = mStreamPlayer.isActive();
+                bool isSequence = mSequencePlayer.isActive();
+                bool disable = false;
+                if (isStream)
+                {
+                    disable = i >= mStreamPlayer.getTrackCount();
+                }
+                else if (isSequence)
+                {
+                    snd::internal::driver::SoundThreadLock lock;
+                    disable = mSequencePlayer.getPlayerTrack(i) == nullptr;
+                }
+
+                if (disable)
+                {
+                    ImGui::BeginDisabled();
+                }
+
+                if (ImGui::DragFloat(sead::FormatFixedSafeString<32>("Track %u", i).cstr(), &mTrackVolume[i], 0.01f, 0.0f, 2.0f))
+                {
+                    if (isStream)
+                    {
+                        snd::internal::driver::SoundThreadLock lock;
+                        mStreamPlayer.setTrackVolume(1 << i, mTrackVolume[i]);
+                    }
+                    else if (isSequence)
+                    {
+                        snd::internal::driver::SoundThreadLock lock;
+                        SequenceTrack* track = mSequencePlayer.getPlayerTrack(i);
+                        if (track)
+                        {
+                            track->setVolume(mTrackVolume[i]);
+                        }
+                    }
+                }
+
+                if (disable)
+                {
+                    ImGui::EndDisabled();
+                }
+            }
+
+            ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
+    }
+}
+
+void SoundPlayer::initPlayerParam_()
+{
+    SEAD_ASSERT(mCurrentPlayer);
+
+    mCurrentPlayer->setVolume(mVolume);
+    mCurrentPlayer->setPitch(mPitch);
+    mCurrentPlayer->setPan(mPan);
+    mCurrentPlayer->setLpfFreq(mLPF);
+    mCurrentPlayer->setBiquadFilter(mBiquadType, mBiquadValue);
+
+    if (isCurrentPlayerStream())
+    {
+        for (u32 i = 0; i < cStrmTrackNum; i++)
+        {
+            mStreamPlayer.setTrackVolume(1 << i, mTrackVolume[i]);
+        }
+    }
+    else if (isCurrentPlayerSequence())
+    {
+        for (u32 i = 0; i < SequenceSoundPlayer::cTrackNumPerPlayer; i++)
+        {
+            SequenceTrack* track = mSequencePlayer.getPlayerTrack(i);
+            if (track)
+            {
+                track->setVolume(mTrackVolume[i]);
+            }
+        }
+
+        mSequencePlayer.setTempoRatio(mSeqTempoRatio);
+    }
 }

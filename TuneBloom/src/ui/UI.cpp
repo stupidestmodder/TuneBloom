@@ -57,6 +57,7 @@ static void DockBuilder(ImGuiID dockspaceId, const ImVec2& dockspaceSize)
     ImGui::DockBuilderDockWindow("###ProjectWindow", dock1);
     ImGui::DockBuilderDockWindow("###InfoWindow", mainDockId);
     ImGui::DockBuilderDockWindow("###PropertiesWindow", dock2);
+    ImGui::DockBuilderDockWindow("###PlayerParamWindow", dock2);
     ImGui::DockBuilderDockWindow("###PlayerWindow", dockDown);
 
     ImGui::DockBuilderFinish(dockspaceId);
@@ -1020,6 +1021,17 @@ void DrawPropertiesUI()
     }
 
     name.append("###PropertiesWindow");
+
+    static bool sStart = true;
+    if (sStart)
+    {
+        ImGui::SetNextWindowFocus();
+        ImGuiWindow* win = ImGui::FindWindowByName("###PropertiesWindow");
+        if (win && win->Appearing)
+        {
+            sStart = false;
+        }
+    }
 
     if (ImGui::Begin(name.cstr()))
     {
