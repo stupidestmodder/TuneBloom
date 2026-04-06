@@ -607,6 +607,21 @@ void SoundPlayer::drawParameters()
             ImGui::EndTabItem();
         }
 
+        //! Effects 💀
+        {
+            ImGui::BeginDisabled();
+            if (ImGui::BeginTabItem("Send"))
+            {
+                ImGui::EndTabItem();
+            }
+            ImGui::EndDisabled();
+
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            {
+                ImGui::SetTooltip("Not implemented");
+            }
+        }
+
         ImGui::EndTabBar();
     }
 }
@@ -712,9 +727,11 @@ void SoundPlayer::drawSeqVars()
                         {
                             varUI(sead::FormatFixedSafeString<32>("Track_%u", trackNo).cstr(), i, mTrackVars[trackNo][i], sCurrentTrackVars[trackNo][i]);
                         }
+
                         ImGui::EndTabItem();
                     }
                 }
+
                 ImGui::EndTabBar();
             }
 
