@@ -16,7 +16,7 @@ public:
         , mPitch(1.0f)
         , mPan(0.0f)
         , mLPF(0.0f)
-        , mBiquadType(0)
+        , mBiquadType((s8)snd::BiquadFilterType::Inherit)
         , mBiquadValue(0.0f)
         , mSeqTempoRatio(1.0f)
 
