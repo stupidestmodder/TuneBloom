@@ -98,6 +98,7 @@ public:
         mPlayerParamSet.biquadValue = value;
     }
 
+    void setPan(f32 pan) { mPlayerParamSet.param.pan = pan; }
     void setPanMode(snd::PanMode mode) { mPlayerParamSet.panMode = mode; }
     void setPanCurve(snd::PanCurve curve) { mPlayerParamSet.panCurve = curve; }
 
@@ -108,6 +109,7 @@ public:
     f32 getLpfFreq() const { return mPlayerParamSet.lpfFreq; }
     s32 getBiquadFilterType() const { return mPlayerParamSet.biquadType; }
     f32 getBiquadFilterValue() const { return mPlayerParamSet.biquadValue; }
+    f32 getPan() { return mPlayerParamSet.param.pan; }
     snd::PanMode getPanMode() const { return mPlayerParamSet.panMode; }
     snd::PanCurve getPanCurve() const { return mPlayerParamSet.panCurve; }
 
