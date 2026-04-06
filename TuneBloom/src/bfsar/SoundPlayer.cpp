@@ -469,6 +469,8 @@ void SoundPlayer::reset()
 
 void SoundPlayer::setVolume(f32 volume)
 {
+    mVolume = volume;
+
     if (isCurrentPlayer())
     {
         snd::internal::driver::SoundThreadLock lock;
