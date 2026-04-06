@@ -368,8 +368,17 @@ void Channel::appendWaveBuffer(const WaveInfo& waveInfo, u32 startOffsetSamples)
     mOriginalLoopStartFrame = waveInfo.originalLoopStartFrame;
 
     // Round down to the 8-byte boundary (because DSP ADPCM is encoded in 8-byte, 14-sample units).
-    if (startOffsetSamples > 0 && waveInfo.sampleFormat == snd::SampleFormat::DspAdpcm)
-        startOffsetSamples = (startOffsetSamples / 14) * 14;
+    if (waveInfo.sampleFormat == snd::SampleFormat::DspAdpcm)
+    {
+        if (startOffsetSamples > 0)
+            startOffsetSamples = (startOffsetSamples / 14) * 14;
+
+        if (startOffsetSamples >= waveInfo.loopEndFrame)
+        {
+            startOffsetSamples--; // Round down againe
+            startOffsetSamples = (startOffsetSamples / 14) * 14;
+        }
+    }
 
     mStartOffsetSamples = startOffsetSamples;
     SEAD_ASSERT(waveInfo.loopEndFrame > startOffsetSamples);
@@ -427,6 +436,7 @@ void Channel::appendWaveBuffer(const WaveInfo& waveInfo, u32 startOffsetSamples)
 
                     //? We are not going to decode for the startOffsetSamples as it's quite expensive to calculate for big streams
                     //? Probable an audible pop will occur but who cares when seeking right ???
+                    // TODO: Maybe do the getLoopContext thingy ?
                     // // Decode partway on own effort (because normally it is the DSP doing the decoding, for this portion, the CPU takes the load).
                     // MultiVoice::calcOffsetAdpcmParam(
                     //     &adpcmContext,
