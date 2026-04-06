@@ -558,11 +558,23 @@ void BankFile::drawUI()
 
 static BankFile::KeyRegion* sContextKeyRegion = nullptr;
 
-void DeleteVeloctity(BankFile::KeyRegion* keyRegion, BankFile::VelocityRegion* velocityRegion)
+void SelectVelocity(BankFile::KeyRegion* keyRegion, BankFile::VelocityRegion* velocityRegion)
+{
+    sSubSelectedItem = velocityRegion;
+    sSelectedItemIsSubWindow = true;
+    sContextKeyRegion = keyRegion;
+}
+
+void DeselectVelocity()
 {
     sSubSelectedItem = nullptr;
     sSelectedItemIsSubWindow = false;
     sContextKeyRegion = nullptr;
+}
+
+void DeleteVeloctity(BankFile::KeyRegion* keyRegion, BankFile::VelocityRegion* velocityRegion)
+{
+    DeselectVelocity();
 
     snd::internal::driver::SoundThreadLock lock;
 
@@ -839,9 +851,7 @@ void DrawKeyboardWithRegions(
             }
             else if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
             {
-                sSubSelectedItem = nullptr;
-                sSelectedItemIsSubWindow = false;
-                sContextKeyRegion = nullptr;
+                DeselectVelocity();
             }
             else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
             {
@@ -891,9 +901,7 @@ void DrawKeyboardWithRegions(
                     }
                     else if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
                     {
-                        sSubSelectedItem = nullptr;
-                        sSelectedItemIsSubWindow = false;
-                        sContextKeyRegion = nullptr;
+                        DeselectVelocity();
                     }
                     else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
                     {
@@ -918,9 +926,7 @@ void DrawKeyboardWithRegions(
                     }
                     else if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
                     {
-                        sSubSelectedItem = nullptr;
-                        sSelectedItemIsSubWindow = false;
-                        sContextKeyRegion = nullptr;
+                        DeselectVelocity();
                     }
                     else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
                     {
@@ -948,9 +954,7 @@ void DrawKeyboardWithRegions(
                     }
                     else if (ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
                     {
-                        sSubSelectedItem = nullptr;
-                        sSelectedItemIsSubWindow = false;
-                        sContextKeyRegion = nullptr;
+                        DeselectVelocity();
                     }
                     else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
                     {
@@ -999,10 +1003,7 @@ void DrawKeyboardWithRegions(
 
                 if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
                 {
-                    //? Select VelocityRegion
-                    sSubSelectedItem = velRegion;
-                    sSelectedItemIsSubWindow = true;
-                    sContextKeyRegion = keyRegion;
+                    SelectVelocity(keyRegion, velRegion);
 
                     if (sDrag.mode == DragMode::None)
                     {
@@ -1028,9 +1029,7 @@ void DrawKeyboardWithRegions(
                 else if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
                 {
                     ImGui::OpenPopup("VelocityRegionContextMenu");
-                    sSubSelectedItem = velRegion;
-                    sSelectedItemIsSubWindow = true;
-                    sContextKeyRegion = keyRegion;
+                    SelectVelocity(keyRegion, velRegion);
                 }
 
                 draw->AddRectFilled(p0, p1, color);
@@ -1158,9 +1157,48 @@ void DrawKeyboardWithRegions(
 
             newRegion->getVelocityRegionList().pushBack(newVelRegion);
 
-            sSubSelectedItem = newVelRegion;
-            sSelectedItemIsSubWindow = true;
-            sContextKeyRegion = newRegion;
+            SelectVelocity(newRegion, newVelRegion);
+        }
+
+        if (sDrag.mode == DragMode::None && sSubSelectedItem && sSubSelectedItem->getItemType() == Item::ItemType::BankFileVelocityRegion && ImGui::IsWindowFocused())
+        {
+            BankFile::VelocityRegion* velRegion = static_cast<BankFile::VelocityRegion*>(sSubSelectedItem);
+            BankFile::KeyRegion* keyRegion = sContextKeyRegion;
+            if (ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
+            {
+                BankFile::KeyRegion* prev = keyRegion->getPrev(*instrument);
+                if (prev && !prev->getVelocityRegionList().isEmpty())
+                {
+                    SelectVelocity(prev, static_cast<BankFile::VelocityRegion*>(prev->getVelocityRegionList().back()->val()));
+                }
+            }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_RightArrow))
+            {
+                BankFile::KeyRegion* next = keyRegion->getNext(*instrument);
+                if (next && !next->getVelocityRegionList().isEmpty())
+                {
+                    SelectVelocity(next, static_cast<BankFile::VelocityRegion*>(next->getVelocityRegionList().back()->val()));
+                }
+            }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_DownArrow))
+            {
+                BankFile::VelocityRegion* prev = velRegion->getPrev(*keyRegion);
+                if (prev)
+                {
+                    SelectVelocity(keyRegion, prev);
+                }
+            }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
+            {
+                BankFile::VelocityRegion* next = velRegion->getNext(*keyRegion);
+                if (next)
+                {
+                    SelectVelocity(keyRegion, next);
+                }
+            }
         }
 
         static s32 mouseKey = 0;
