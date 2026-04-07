@@ -166,8 +166,32 @@ void DrawSoundSetPropertiesUI()
 
             ImGui::SameLine();
 
+            bool isError =
+                (sound->getSoundType() == Sound::SoundType::Seq  && soundSet->getSoundSetType() != SoundSet::SoundSetType::Seq) ||
+                (sound->getSoundType() == Sound::SoundType::Wave && soundSet->getSoundSetType() != SoundSet::SoundSetType::Wave) ||
+                (sound->getSoundType() == Sound::SoundType::Strm);
+
+            if (isError)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+            }
+
             if (ImGui::Selectable(sound->getFormattedName().cstr()))
             {
+            }
+
+            if (isError)
+            {
+                ImGui::PopStyleColor();
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+                {
+                    ImGui::SetTooltip(
+                        "This Sound's type does not match the SoundSet type\n"
+                        "we allow this except for Wave Sounds\n"
+                        "but please note that if your game tries to explicitly load this SoundSet\n"
+                        "this and all Sounds after will NOT get loaded !!!"
+                    );
+                }
             }
 
             if (ImGui::BeginPopupContextItem())
