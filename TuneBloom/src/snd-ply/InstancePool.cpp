@@ -1,6 +1,7 @@
 #include "snd/InstancePool.h"
 
 #include <math/seadMathCalcCommon.h>
+#include <prim/seadPtrUtil.h>
 
 namespace snd { namespace internal {
 
@@ -8,7 +9,7 @@ u32 PoolImpl::createImpl(void* buffer, size_t size, u32 objSize)
 {
     SEAD_ASSERT(buffer != nullptr);
 
-    char* ptr = (char*)sead::Mathu::roundUpPow2((u32)buffer, 4);
+    char* ptr = (char*)sead::PtrUtil::roundUpPow2(buffer, 4);
     objSize = sead::Mathu::roundUpPow2(objSize, 4);
 
     u32 numObjects = (size - (ptr - static_cast<char*>(buffer))) / objSize;

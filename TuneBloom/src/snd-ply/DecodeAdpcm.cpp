@@ -12,7 +12,7 @@ void DecodeDspAdpcm(
 {
     u32 frame = playPosition / 14;
     u32 frameFrac = playPosition - frame * 14;
-    const u8* frameBegin = reinterpret_cast<const u8*>(reinterpret_cast<u32>(adpcmData) + (frame * 8));
+    const u8* frameBegin = reinterpret_cast<const u8*>(reinterpret_cast<const u8*>(adpcmData) + (frame * 8));
 
     s32 pred  = static_cast<s32>(context.pred_scale >> 4);
     s32 scale = static_cast<s32>(context.pred_scale & 0xF);
