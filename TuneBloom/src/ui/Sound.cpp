@@ -671,6 +671,26 @@ void DrawSoundPropertiesUI()
                         {
                             strmSoundInfo.setIsLoop(isLoop);
                         }
+
+                        if (strmSoundInfo.getStreamType() == Sound::StreamSoundInfo::StreamType::NwStreamBinary)
+                        {
+                            ImGui::SameLine();
+
+                            if (!enableSoundExt)
+                            {
+                                ImGui::EndDisabled();
+                            }
+
+                            HelpMarker(
+                                "Note: For BFSTM Streams this looping info is ignored\n"
+                                "and instead is taken from the first Track attached Wave File"
+                            );
+
+                            if (!enableSoundExt)
+                            {
+                                ImGui::BeginDisabled();
+                            }
+                        }
                     }
 
                     {
