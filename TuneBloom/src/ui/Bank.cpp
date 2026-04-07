@@ -42,9 +42,34 @@ InstanciateItemCallback CreateBankFunc(bool clear)
     return CreateItemFunc(clear, []() -> Item* { return new Bank(); }, nullptr);
 }
 
+const char* BankNamePrefixFunc(Item* item)
+{
+    Bank* bank = static_cast<Bank*>(item);
+
+    BankFile* bankFile = static_cast<BankFile*>(bank->getFileRef().getItem());
+    if (!bankFile)
+    {
+        ImGui::BeginDisabled();
+    }
+
+    if (ImGui::Button(sead::FormatFixedSafeString<32>(ICON_LC_FILE_PEN "###%u", bank->getId()).cstr()))
+    {
+        OpenFileWindow(bankFile);
+    }
+
+    if (!bankFile)
+    {
+        ImGui::EndDisabled();
+    }
+
+    ImGui::SameLine();
+
+    return nullptr;
+}
+
 void DrawBanksUI()
 {
-    DrawAllItemsUI("Bank", sBfsar.getBankList(), &CreateBankFunc);
+    DrawAllItemsUI("Bank", sBfsar.getBankList(), &CreateBankFunc, &BankNamePrefixFunc);
 }
 
 void DrawBankPropertiesUI()
