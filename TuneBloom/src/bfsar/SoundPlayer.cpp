@@ -498,25 +498,25 @@ void SoundPlayer::drawParameters()
         {
             bool hasPlayer = isCurrentPlayer();
 
-            if (ImGui::DragFloat("Volume", &mVolume, 0.01f, 0.0f, 4.0f) && hasPlayer)
+            if (ImGui::SliderFloat("Volume", &mVolume, 0.0f, 4.0f) && hasPlayer)
             {
                 snd::internal::driver::SoundThreadLock lock;
                 mCurrentPlayer->setVolume(mVolume);
             }
 
-            if (ImGui::DragFloat("Pitch", &mPitch, 0.01f, 0.01f, 4.0f) && hasPlayer)
+            if (ImGui::SliderFloat("Pitch", &mPitch, 0.01f, 4.0f) && hasPlayer)
             {
                 snd::internal::driver::SoundThreadLock lock;
                 mCurrentPlayer->setPitch(mPitch);
             }
 
-            if (ImGui::DragFloat("Pan", &mPan, 0.01f, -2.0f, 2.0f) && hasPlayer)
+            if (ImGui::SliderFloat("Pan", &mPan, -2.0f, 2.0f) && hasPlayer)
             {
                 snd::internal::driver::SoundThreadLock lock;
                 mCurrentPlayer->setPan(mPan);
             }
 
-            if (ImGui::DragFloat("LPF Frequency", &mLPF, 0.01f, -1.0f, 0.0f) && hasPlayer)
+            if (ImGui::SliderFloat("LPF Frequency", &mLPF, -1.0f, 0.0f) && hasPlayer)
             {
                 snd::internal::driver::SoundThreadLock lock;
                 mCurrentPlayer->setLpfFreq(mLPF);
@@ -540,7 +540,7 @@ void SoundPlayer::drawParameters()
             }
             mBiquadType = biquadType - 1;
 
-            if (ImGui::DragFloat("Biquad Filter Value", &mBiquadValue, 0.01f, 0.0f, 1.0f) && hasPlayer)
+            if (ImGui::SliderFloat("Biquad Filter Value", &mBiquadValue, 0.0f, 1.0f) && hasPlayer)
             {
                 snd::internal::driver::SoundThreadLock lock;
                 mCurrentPlayer->setBiquadFilter(mCurrentPlayer->getBiquadFilterType(), mBiquadValue);
@@ -596,7 +596,7 @@ void SoundPlayer::drawParameters()
                     ImGui::BeginDisabled();
                 }
 
-                if (ImGui::DragFloat(sead::FormatFixedSafeString<32>("Track %u", i).cstr(), &mTrackVolume[i], 0.01f, 0.0f, 2.0f))
+                if (ImGui::SliderFloat(sead::FormatFixedSafeString<32>("Track %u", i).cstr(), &mTrackVolume[i], 0.0f, 2.0f))
                 {
                     if (isStream)
                     {
