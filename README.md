@@ -10,12 +10,12 @@
 </div>
 
 ## Overview
-TuneBloom is an extremely fast & stable editor for editing NintendoWare audio formats, mainly for the Wii U. It features high performance, low memory usage, and a high degree of data accuracy, allowing you to modify everything throughout the archive while ensuring that nothing will go wrong in the process. Support is included for every component of sound archives including waves, sequences, streams, banks, and more. Live playback allows quick previews of your work resulting in a highly effective and streamlined workflow. This is TuneBloom.
+TuneBloom is an extremely fast & stable editor for editing NintendoWare audio formats, primarily for the Wii U. It features high performance, low memory usage, and a high degree of data accuracy, allowing you to modify everything throughout the archive while ensuring that nothing will go wrong in the process. Support is included for every component of sound archives including waves, sequences, streams, banks, and more. Live playback allows quick previews of your work resulting in a highly effective and streamlined workflow. This is TuneBloom.
 
 ## Features
 - Playback for every type of sound!
-- Sequence (BFSEQ) editor!
-- Bank (BFBNK) editor!
+- Sequence (`BFSEQ`) editor!
+- Bank (`BFBNK`) editor!
 - Edit every single property of the BFSAR!
 - And more!
 
@@ -27,22 +27,23 @@ TuneBloom is an extremely fast & stable editor for editing NintendoWare audio fo
   <img width="400" alt="TuneBloom_Ot0x2Fng9e" src="https://github.com/user-attachments/assets/e84fc549-f740-4888-ae22-bd142aef731a" />
 </div>
 
-## Goals
-- BCSAR support.
-- BFSAR support. (Switch)
+## Future Goals
+- `BCSAR` support. (3DS)
+- `BFSAR` support. (Switch)
 
 ## Limitations
-- External groups (BFGRP)
-  - Support for external groups is still WIP (Reading only), that means games like SM3DW, CTTT and any that makes use of external groups only supports playback.
+- External groups (`BFGRP`)
+  - Support for external groups is still WIP (read-only), that means games like SM3DW, CTTT and any other game which makes use of external groups only supports playback.
 - Import/Export wave files
   - The tool can only make use of .wav files for importing/replacing and exporting.
 
 ## Compiling
 - Premake is used as the build system which makes setting up a development environment very straightforward.
 - Simply run the `setupVS.bat` script in the root of the repository and then open the generated `.sln` file in Visual Studio to edit & build.
-- Currently, only Windows is supported with Visual Studio but support for other platforms is upcoming.
+- Currently, only Windows is supported with MSVC & Clang, but support for other platforms is upcoming.
 
 ## Contributing
+External contributions & Pull Requests are welcome! We understand that the quality of the code may not be fully up-to-bar, so we appreciate your patience. Help and developer discussions are always available in our [Discord](https://go.nsmbu.net/discord) server.
 
 ## Credits
 - [STUPID Modder](https://github.com/stupidestmodder) - Development lead
