@@ -129,16 +129,16 @@ struct WaveInfo
             const DspAdpcmLoopParam& loop = p.adpcmLoopParam;
 
             SEAD_PRINT("  %d/%d addr(%p)\n       ps(%5d)  yn1(%5d)  yn2(%5d)\n      lps(%5d) lyn1(%5d) lyn2(%5d)\n",
-                    i, channelCount-1, p.dataAddress, adpcm.predScale, adpcm.yn1, adpcm.yn2,
-                    loop.loopPredScale, loop.loopYn1, loop.loopYn2);
+                    i, channelCount-1, p.dataAddress, (u16)adpcm.predScale, (u16)adpcm.yn1, (u16)adpcm.yn2,
+                    (u16)loop.loopPredScale, (u16)loop.loopYn1, (u16)loop.loopYn2);
 
             SEAD_PRINT("      coef %5d %5d %5d %5d %5d %5d %5d %5d\n",
-                    adpcm.coef[0][0], adpcm.coef[0][1], adpcm.coef[1][0], adpcm.coef[1][1],
-                    adpcm.coef[2][0], adpcm.coef[2][1], adpcm.coef[3][0], adpcm.coef[3][1]);
+                    (u16)adpcm.coef[0][0], (u16)adpcm.coef[0][1], (u16)adpcm.coef[1][0], (u16)adpcm.coef[1][1],
+                    (u16)adpcm.coef[2][0], (u16)adpcm.coef[2][1], (u16)adpcm.coef[3][0], (u16)adpcm.coef[3][1]);
 
             SEAD_PRINT("           %5d %5d %5d %5d %5d %5d %5d %5d\n",
-                    adpcm.coef[4][0], adpcm.coef[4][1], adpcm.coef[5][0], adpcm.coef[5][1],
-                    adpcm.coef[6][0], adpcm.coef[6][1], adpcm.coef[7][0], adpcm.coef[7][1]);
+                    (u16)adpcm.coef[4][0], (u16)adpcm.coef[4][1], (u16)adpcm.coef[5][0], (u16)adpcm.coef[5][1],
+                    (u16)adpcm.coef[6][0], (u16)adpcm.coef[6][1], (u16)adpcm.coef[7][0], (u16)adpcm.coef[7][1]);
         }
     #endif // NW_CONSOLE_ENABLE
     }

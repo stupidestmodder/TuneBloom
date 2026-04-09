@@ -51,7 +51,7 @@ bool ParseSequenceFile(std::vector<std::string>* outLines, std::unordered_map<u3
                 break;
         }
 
-        u32 offset = trackPtr - seqData;
+        u32 offset = reinterpret_cast<uintptr_t>(trackPtr) - reinterpret_cast<uintptr_t>(seqData);
 
         MmlCommandBase* cmd = nullptr;
         {
@@ -64,7 +64,7 @@ bool ParseSequenceFile(std::vector<std::string>* outLines, std::unordered_map<u3
 
     const auto& labelCache = reader.mLabelCache;
 
-    u32 endOffset = trackPtr - seqData;
+    u32 endOffset = reinterpret_cast<uintptr_t>(trackPtr) - reinterpret_cast<uintptr_t>(seqData);
     for (const auto& it : labelCache)
     {
         SEAD_ASSERT(commands.find(it.first) != commands.end() || it.first == endOffset);

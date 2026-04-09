@@ -379,7 +379,7 @@ SequenceTrack::ParseResult MmlParser::parse(SequenceTrack* track, bool doNoteOn)
         case 0xa0: // prefix commands
         {
             // Having a prefix command here is invalid.
-            SEAD_ASSERT(false, "Invalid seqdata command: %d", cmd);
+            SEAD_ASSERT_MSG(false, "Invalid seqdata command: %d", cmd);
         }
         }
     }
