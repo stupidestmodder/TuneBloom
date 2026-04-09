@@ -94,13 +94,17 @@ bool Bfsar::open(u8* bfsarFile, const sead::SafeString& filePath, sead::Heap* he
 
     mFilePath = new(heap) sead::HeapSafeString(heap, filePath);
 
-    nw::snd::MemorySoundArchive* soundArchive = new(heap) nw::snd::MemorySoundArchive();
-    bool success = soundArchive->Initialize(bfsarFile);
-    SEAD_ASSERT(success);
+    bool success;
+    {
+        nw::snd::MemorySoundArchive soundArchive;
+        if (!soundArchive.Initialize(bfsarFile))
+        {
+            return false;
+        }
 
-    success = open_(*soundArchive, heap);
+        success = open_(soundArchive, heap);
+    }
 
-    delete soundArchive;
     delete bfsarFile;
 
     mOpen = true;

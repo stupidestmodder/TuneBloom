@@ -126,6 +126,8 @@ bool SaveFileAs();
 bool CloseFile();
 bool Exit();
 
+bool CheckBlockCorrupt(const char* fileName, const char* blockName, const void* block);
+
 // Ui Types
 void DrawProjectInfoUI();
 void DrawBanksUI();

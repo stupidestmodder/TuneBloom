@@ -44,7 +44,19 @@ public:
     void addPopup(const PopupInfo& info);
     void update();
 
+    void setCorruptInfo(const sead::SafeString& info)
+    {
+        mCorruptInfo = info;
+    }
+
+    const sead::SafeString& getCorruptInfo() const
+    {
+        return mCorruptInfo;
+    }
+
 private:
     sead::FixedRingBuffer<PopupInfo, 10> mPopups;
     bool mPopupOpen;
+
+    sead::FixedSafeString<1024> mCorruptInfo;
 };

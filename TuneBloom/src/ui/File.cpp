@@ -252,7 +252,10 @@ bool OpenFile()
 
     if (!sBfsar.open(bfsarFile, filePath, nullptr)) //? bfsarFile is freed here
     {
-        PopupMgr::instance()->addPopup({ "Your BFSAR file is corrupted beyond repair :(", nullptr });
+        sead::FormatFixedSafeString<1024> msg(
+            "Your BFSAR file is corrupted beyond repair :(\n%s", PopupMgr::instance()->getCorruptInfo().cstr()
+        );
+        PopupMgr::instance()->addPopup({ msg, nullptr });
         CloseFile();
         return false;
     }
@@ -349,6 +352,17 @@ bool Exit()
 
     sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(util::getFramework());
     fw->requestExit();
+
+    return true;
+}
+
+bool CheckBlockCorrupt(const char* fileName, const char* blockName, const void* block)
+{
+    if (sead::MemUtil::compare(block, blockName, 4) != 0)
+    {
+        PopupMgr::instance()->setCorruptInfo(sead::FormatFixedSafeString<64>("%s: %s block not found", fileName, blockName));
+        return false;
+    }
 
     return true;
 }

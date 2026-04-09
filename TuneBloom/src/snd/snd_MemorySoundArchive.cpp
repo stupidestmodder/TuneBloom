@@ -2,6 +2,8 @@
 
 #include <snd/snd_GroupFileReader.h>
 
+#include <ui/UI.h>
+
 namespace nw { namespace snd {
 
 MemorySoundArchive::MemorySoundArchive()
@@ -34,11 +36,21 @@ bool MemorySoundArchive::Initialize(const void* soundArchiveData)
     mHeader = header; // Copy
 
     const void* infoBlock = sead::PtrUtil::addOffset(soundArchiveData, mHeader.GetInfoBlockOffset());
+    if (!CheckBlockCorrupt("BFSAR", "INFO", infoBlock))
+    {
+        return false;
+    }
+
     mInfoBlockBody = &reinterpret_cast<const internal::SoundArchiveFile::InfoBlock*>(infoBlock)->body;
 
     if (mHeader.GetStringBlockOffset() != 0xFFFFFFFF && mHeader.GetStringBlockSize() != 0xFFFFFFFF)
     {
         const void* stringBlock = sead::PtrUtil::addOffset(soundArchiveData, mHeader.GetStringBlockOffset());
+        if (!CheckBlockCorrupt("BFSAR", "STRG", stringBlock))
+        {
+            return false;
+        }
+
         mStringBlockBody = &reinterpret_cast<const internal::SoundArchiveFile::StringBlock*>(stringBlock)->body;
     }
 
