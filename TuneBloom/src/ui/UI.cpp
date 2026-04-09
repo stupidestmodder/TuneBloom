@@ -106,6 +106,7 @@ static ImGuiID DockSpaceOverViewport(const ImGuiViewport* viewport = nullptr, Im
 static bool sWantsNew = false;
 static bool sWantsOpen = false;
 static bool sWantsClose = false;
+static bool sWantsExit = false;
 static bool sWantsAbout = false;
 
 void DrawMenuBar()
@@ -162,6 +163,18 @@ void DrawMenuBar()
             if (!bfsarOpen)
             {
                 ImGui::EndDisabled();
+            }
+
+            if (ImGui::MenuItem(ICON_LC_DOOR_OPEN " Exit"))
+            {
+                if (bfsarOpen)
+                {
+                    sWantsExit = true;
+                }
+                else
+                {
+                    Exit();
+                }
             }
 
             ImGui::EndMenu();
@@ -358,6 +371,12 @@ void DrawUI()
         ImGui::OpenPopup("###Save");
         sWantsClose = false;
         fileAction = &CloseFile;
+    }
+    else if (sWantsExit)
+    {
+        ImGui::OpenPopup("###Save");
+        sWantsExit = false;
+        fileAction = &Exit;
     }
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();

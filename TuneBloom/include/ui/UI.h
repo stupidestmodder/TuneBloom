@@ -124,6 +124,7 @@ void OpenFile();
 bool SaveFile();
 bool SaveFileAs();
 void CloseFile();
+void Exit();
 
 // Ui Types
 void DrawProjectInfoUI();

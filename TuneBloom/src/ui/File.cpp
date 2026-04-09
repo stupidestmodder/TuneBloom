@@ -311,3 +311,11 @@ void CloseFile()
         fw->setCaption(util::cAppName);
     }
 }
+
+void Exit()
+{
+    CloseFile();
+
+    sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(util::getFramework());
+    fw->requestExit();
+}
