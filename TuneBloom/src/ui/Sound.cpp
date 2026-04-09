@@ -330,35 +330,35 @@ void DrawSoundPropertiesUI()
 
                 CenteredTextX("Flags");
 
-                if (ImGui::CheckboxFlagsT<u32>("Volume", &flags, Sound::Sound3DInfo::Flags::Volume))
+                if (ImGui::CheckboxFlags("Volume", &flags, Sound::Sound3DInfo::Flags::Volume))
                 {
                     sound3DInfo.setFlags(flags);
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::CheckboxFlagsT<u32>("Priority", &flags, Sound::Sound3DInfo::Flags::Priority))
+                if (ImGui::CheckboxFlags("Priority", &flags, Sound::Sound3DInfo::Flags::Priority))
                 {
                     sound3DInfo.setFlags(flags);
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::CheckboxFlagsT<u32>("Pan", &flags, Sound::Sound3DInfo::Flags::Pan))
+                if (ImGui::CheckboxFlags("Pan", &flags, Sound::Sound3DInfo::Flags::Pan))
                 {
                     sound3DInfo.setFlags(flags);
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::CheckboxFlagsT<u32>("Surround Pan", &flags, Sound::Sound3DInfo::Flags::SPan))
+                if (ImGui::CheckboxFlags("Surround Pan", &flags, Sound::Sound3DInfo::Flags::SPan))
                 {
                     sound3DInfo.setFlags(flags);
                 }
 
                 ImGui::SameLine();
 
-                if (ImGui::CheckboxFlagsT<u32>("Filter", &flags, Sound::Sound3DInfo::Flags::Filter))
+                if (ImGui::CheckboxFlags("Filter", &flags, Sound::Sound3DInfo::Flags::Filter))
                 {
                     sound3DInfo.setFlags(flags);
                 }

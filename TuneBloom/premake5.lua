@@ -2,7 +2,6 @@ project "TuneBloom"
     kind "ConsoleApp"
     language "C++"
     cppdialect "C++20"
-    staticruntime "off"
     systemversion "latest"
 
     exceptionhandling "Off"
@@ -31,7 +30,7 @@ project "TuneBloom"
 
     flags {
         "MultiProcessorCompile",
-        --"ShadowedVariables",
+        "ShadowedVariables",
         --"FatalWarnings"
     }
 
