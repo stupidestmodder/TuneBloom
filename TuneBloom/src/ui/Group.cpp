@@ -28,7 +28,7 @@ const Item* Group::validate(sead::BufferedSafeString& error) const
 
     sead::FixedSafeString<256> itemError;
 
-    u32 i = 0;
+    std::unordered_set<const Item*> itemsTarget;
     for (const Item* item : mItemInfoList)
     {
         const ItemInfo& itemInfo = *static_cast<const ItemInfo*>(item);
@@ -40,11 +40,18 @@ const Item* Group::validate(sead::BufferedSafeString& error) const
                 error.format("'%s': %s", itemInfo.getFormattedName().cstr(), itemError.cstr());
                 return &itemInfo;
             }
+
+            const Item* target = itemInfo.getItemRef().getItem();
+            if (itemsTarget.count(target) > 0)
+            {
+                error.format("Item '%s' is already in this Group", itemInfo.getFormattedName().cstr());
+                return &itemInfo;
+            }
+
+            itemsTarget.insert(target);
         }
 
         itemError.clear();
-
-        i++;
     }
 
     return nullptr;
