@@ -17,10 +17,12 @@ RootTask::RootTask(const sead::TaskConstructArg& arg)
 void RootTask::prepare()
 {
     {
-        sead::Framework::CreateSystemTaskArg arg;
-        //arg.infloop_detection_span = sead::TickSpan::makeFromSeconds(5);
+        // sead::Framework::CreateSystemTaskArg arg;
+        // arg.infloop_detection_span = sead::TickSpan::makeFromSeconds(5);
 
-        getFramework()->createSystemTasks(this, arg);
+        // getFramework()->createSystemTasks(this, arg);
+        sead::GameFramework* fw = sead::DynamicCast<sead::GameFramework>(getFramework());
+        fw->createProcessMeter(this);
     }
 
     mNativeFileDevice = new sead::WinNativeFileDevice();
@@ -49,10 +51,10 @@ void RootTask::prepare()
 
 void RootTask::calc()
 {
-    sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(getFramework());
+    // sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(getFramework());
 
-    sead::FixedSafeString<32> title;
-    title.format("FPS: %f", fw->calcFps());
+    // sead::FixedSafeString<32> title;
+    // title.format("FPS: %f", fw->calcFps());
 
     //fw->setCaption(title);
 }
