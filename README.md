@@ -33,7 +33,7 @@ TuneBloom is an extremely fast & stable editor for editing NintendoWare audio fo
 
 ## Limitations
 - External groups (`BFGRP`)
-  - Support for external groups is still WIP (read-only), that means games like SM3DW, CTTT and any other game which makes use of external groups only supports playback.
+  - Support for external groups is still WIP (read-only), that means games like SM3DW, CTTT and any other game which makes use of external groups only supports playback. (You have to provide the `BFGRP`s on load)
 - Import/Export wave files
   - The tool can only make use of .wav files for importing/replacing and exporting.
 - Edited `BFSAR` files
