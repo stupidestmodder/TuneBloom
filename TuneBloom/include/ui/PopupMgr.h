@@ -4,10 +4,10 @@
 #include <heap/seadDisposer.h>
 #include <prim/seadSafeString.h>
 
-#include <VectorMap.h>
+#include <map>
 #include <string>
 
-class Item;
+#include <bfsar/Item.h>
 
 class PopupMgr
 {
@@ -74,5 +74,14 @@ private:
     sead::FixedSafeString<1024> mCorruptInfo;
 
     Item* mCurrentProcessItem;
-    VectorMap<Item*, std::pair<Item*, std::vector<std::string>>> mProcessedErrors;
+
+    struct Cmp
+    {
+        bool operator()(const Item* a, const Item* b) const
+        {
+            return a->getIdWithType() < b->getIdWithType();
+        }
+    };
+
+    std::map<Item*, std::vector<std::string>, Cmp> mProcessedErrors;
 };

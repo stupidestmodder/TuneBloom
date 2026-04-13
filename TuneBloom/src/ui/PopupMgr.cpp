@@ -122,14 +122,7 @@ void PopupMgr::pushCurrentItemError(const sead::SafeString& error)
         str = "Unknown";
     }
 
-    if (mProcessedErrors.contains(mCurrentProcessItem))
-    {
-        mProcessedErrors[mCurrentProcessItem].second.push_back(str);
-    }
-    else
-    {
-        mProcessedErrors.insert(mCurrentProcessItem, { mCurrentProcessItem, { str } });
-    }
+    mProcessedErrors[mCurrentProcessItem].push_back(str);
 }
 
 void PopupMgr::updateErrors_()
@@ -141,10 +134,12 @@ void PopupMgr::updateErrors_()
 
     static const char* sPopupName = "###PopupMgrErrors";
 
+    static auto sItSel = mProcessedErrors.end();
     if (!mPopupOpen)
     {
         ImGui::OpenPopup(sPopupName);
         mPopupOpen = true;
+        sItSel = mProcessedErrors.begin();
     }
 
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
@@ -153,9 +148,10 @@ void PopupMgr::updateErrors_()
     if (ImGui::BeginPopupModal(sead::FormatFixedSafeString<64>(ICON_LC_ALERT_TRIANGLE " Errors with file%s", sPopupName).cstr()))
     {
         ImVec2 buttonSize((ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x * 1.0f) / 1.0f, 25.0f);
-        f32 sizeSlack = -buttonSize.y - ImGui::GetStyle().WindowPadding.y / 2.0f;
+        f32 sizeSlack = -buttonSize.y - ImGui::GetStyle().WindowPadding.y / 1.0f;
 
         static size_t sSelected = 0;
+
         bool scroll = false;
         if (ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow))
         {
@@ -164,6 +160,7 @@ void PopupMgr::updateErrors_()
                 if (sSelected != 0)
                 {
                     sSelected--;
+                    --sItSel;
                     scroll = true;
                 }
             }
@@ -173,6 +170,7 @@ void PopupMgr::updateErrors_()
                 if (sSelected < mProcessedErrors.size() - 1)
                 {
                     sSelected++;
+                    ++sItSel;
                     scroll = true;
                 }
             }
@@ -184,6 +182,7 @@ void PopupMgr::updateErrors_()
         {
             ImGui::BeginChild("LeftPane", ImVec2(150, sizeSlack), ImGuiChildFlags_Border | ImGuiChildFlags_ResizeX);
 
+            auto it = mProcessedErrors.begin();
             for (size_t i = 0; i < mProcessedErrors.size(); i++)
             {
                 if (scroll && sSelected == i)
@@ -191,11 +190,14 @@ void PopupMgr::updateErrors_()
                     ImGui::SetScrollHereY();
                 }
 
-                Item* item = mProcessedErrors.getVector()[i].first;
+                Item* item = it->first;
                 if (ImGui::Selectable(item->getFormattedName().cstr(), sSelected == i))
                 {
                     sSelected = i;
+                    sItSel = it;
                 }
+
+                ++it;
             }
 
             ImGui::EndChild();
@@ -210,7 +212,7 @@ void PopupMgr::updateErrors_()
             ImGui::Text("Info");
             ImGui::Separator();
             
-            const std::vector<std::string>& errors = mProcessedErrors.getVector()[sSelected].second;
+            const std::vector<std::string>& errors = sItSel->second;
             for (size_t i = 0; i < errors.size(); i++)
             {
                 ImGui::Text(errors[i].c_str());
@@ -233,6 +235,7 @@ void PopupMgr::updateErrors_()
             mProcessedErrors.clear();
             mPopupOpen = false;
             sSelected = 0;
+            sItSel = mProcessedErrors.end();
             ImGui::CloseCurrentPopup();
         }
 
