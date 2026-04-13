@@ -16,7 +16,7 @@ TuneBloom is an extremely fast & stable editor for editing NintendoWare audio fo
 - Playback for every type of sound!
 - Sequence (`BFSEQ`) editor!
 - Bank (`BFBNK`) editor!
-- Edit every single property of the BFSAR!
+- Edit every single property of the `BFSAR`!
 - And more!
 
 ## Screenshots
@@ -36,6 +36,8 @@ TuneBloom is an extremely fast & stable editor for editing NintendoWare audio fo
   - Support for external groups is still WIP (read-only), that means games like SM3DW, CTTT and any other game which makes use of external groups only supports playback.
 - Import/Export wave files
   - The tool can only make use of .wav files for importing/replacing and exporting.
+- Edited `BFSAR` files
+  - Sound archives which have been re-saved by imperfect tools (such as Citric Composer) are very likely to have been corrupted in ways that will result in failure to load into TuneBloom.
 
 ## Compiling
 - Premake is used as the build system which makes setting up a development environment very straightforward.
@@ -52,3 +54,4 @@ External contributions & Pull Requests are welcome! We understand that the quali
 - [Alex Barney](https://github.com/Thealexbarney) - DspTool (Adpcm Encoding)
 - [omar](https://github.com/ocornut) - ImGui
 - [Vladimir Shatrov](https://github.com/frowrik) - ImGui piano keyboard
+- [BalazsJako](https://github.com/BalazsJako) - ImGui text editor
