@@ -352,12 +352,12 @@ public:
                 mFlags = flags;
             }
 
-            // const sead::ObjList<u8>& getChannels() const
-            // {
-            //     return mChannels;
-            // }
+            const sead::ObjList<u8>& getChannels_() const
+            {
+                return mChannels;
+            }
 
-            // sead::ObjList<u8>& getChannels()
+            // sead::ObjList<u8>& getChannels_()
             // {
             //     return mChannels;
             // }

@@ -9,6 +9,8 @@
 
 #include <dsp/dsp.h>
 
+class Sound;
+
 void FillAdpcmInfo(ADPCMINFO* adpcmInfo, const snd::DspAdpcmParam& param, const snd::internal::DspAdpcmLoopParam& loopParam);
 void FillAdpcmParam(snd::DspAdpcmParam* param, snd::internal::DspAdpcmLoopParam* loopParam, const ADPCMINFO& adpcmInfo);
 void FillAdpcmParam(snd::AdpcmParam* param, const ADPCMINFO& adpcmInfo);
@@ -110,6 +112,8 @@ public:
 
         friend class Bfsar;
         friend class WaveFile;
+
+        friend bool ReadStreamWaves(Sound* sound, const void* strmFile);
     };
 
     static const char* sEncodingTypes[3];
@@ -297,4 +301,6 @@ private:
 
     friend class Bfsar;
     friend class BfwarFile;
+
+    friend bool ReadStreamWaves(Sound* sound, const void* strmFile);
 };
