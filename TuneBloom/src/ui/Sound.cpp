@@ -601,6 +601,11 @@ void DrawSoundPropertiesUI()
                     {
                         ImGui::EndDisabled();
                     }
+
+                    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_DelayNone))
+                    {
+                        ImGui::SetTooltip("Go to label with Bank info");
+                    }
                 }
             }
 
