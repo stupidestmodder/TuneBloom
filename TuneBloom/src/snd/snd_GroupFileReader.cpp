@@ -2,14 +2,19 @@
 
 #include <prim/seadMemUtil.h>
 
+#include <ui/PopupMgr.h>
+#include <ui/UI.h>
+
 namespace nw { namespace snd { namespace internal {
 
 GroupFileReader::GroupFileReader(const void* groupFile)
     : mInfoBlockBody(nullptr)
     , mFileBlockBody(nullptr)
     , mInfoExBlockBody(nullptr)
+    , mIsInitialized(false)
 {
-    SEAD_ASSERT(groupFile);
+    if (!groupFile)
+        return;
 
     {
         const ut::BinaryFileHeader* header = reinterpret_cast<const ut::BinaryFileHeader*>(groupFile);
@@ -17,14 +22,15 @@ GroupFileReader::GroupFileReader(const void* groupFile)
         // if (sead::MemUtil::compare(header->signature, "CGRP", 4) != 0)
         if (sead::MemUtil::compare(header->signature, "FGRP", 4) != 0)
         {
-            SEAD_ASSERT_MSG(false, "not a GROUP file");
+            PopupMgr::instance()->pushCurrentItemError("File is not a valid BFGRP");
             return;
         }
 
         // if (false)
         if (header->version != 0x00010000)
         {
-            SEAD_ASSERT_MSG(false, "GROUP version not supported (0x%08X)", (u32)header->version);
+            sead::FormatFixedSafeString<64> msg("BFGRP version not supported (0x%08X)", (u32)header->version);
+            PopupMgr::instance()->pushCurrentItemError(msg);
             return;
         }
     }
@@ -37,33 +43,30 @@ GroupFileReader::GroupFileReader(const void* groupFile)
 
     if (!infoBlock)
     {
-        SEAD_ASSERT_MSG(false, "GROUP: INFO block is missing");
+        PopupMgr::instance()->pushCurrentItemError("BFGRP: INFO block not found");
         return;
     }
 
     if (!fileBlock)
     {
-        SEAD_ASSERT_MSG(false, "GROUP: FILE block is missing");
+        PopupMgr::instance()->pushCurrentItemError("BFGRP: FILE block not found");
         return;
     }
 
-    if (sead::MemUtil::compare(infoBlock->header.kind, "INFO", 4) != 0)
+    if (!CheckBlockCorruptError("BFGRP", "INFO", infoBlock))
     {
-        SEAD_ASSERT_MSG(false, "GROUP: INFO block is invalid");
         return;
     }
 
-    if (sead::MemUtil::compare(fileBlock->header.kind, "FILE", 4) != 0)
+    if (!CheckBlockCorruptError("BFGRP", "FILE", fileBlock))
     {
-        SEAD_ASSERT_MSG(false, "GROUP: FILE block is invalid");
         return;
     }
 
     if (infoExBlock)
     {
-        if (sead::MemUtil::compare(infoExBlock->header.kind, "INFX", 4) != 0)
+        if (!CheckBlockCorruptError("BFGRP", "INFX", infoExBlock))
         {
-            SEAD_ASSERT_MSG(false, "GROUP: INFX block is invalid");
             return;
         }
 
@@ -72,6 +75,8 @@ GroupFileReader::GroupFileReader(const void* groupFile)
 
     mInfoBlockBody = &(infoBlock->body);
     mFileBlockBody = &(fileBlock->body);
+
+    mIsInitialized = true;
 }
 
 bool GroupFileReader::ReadGroupItemLocationInfo(GroupItemLocationInfo* out, u32 index) const

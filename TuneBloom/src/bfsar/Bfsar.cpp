@@ -125,7 +125,7 @@ bool Bfsar::save()
     if (!validate_())
         return false;
 
-    sead::FormatFixedSafeString<512> path("%s.save.bfsar", mFilePath->cstr()); // TODO
+    sead::FormatFixedSafeString<512> path("%s.save.bfsar", mFilePath->cstr()); // TODO: Remove
     // sead::SafeString path = *mFilePath;
 
     sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");
@@ -377,6 +377,10 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                         }
                     }
                 }
+                else
+                {
+                    PopupMgr::instance()->pushCurrentItemError("External group file wasn't loaded");
+                }
             }
 
             if (bfgrpFile)
@@ -386,6 +390,12 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
 
                 soundArchive.mExternalGroups.push_back(bfgrpFile);
             }
+        }
+
+        nw::snd::internal::GroupFileReader reader(soundArchive.detail_GetFileAddress(groupInfo->fileId));
+        if (!reader.IsInitialized())
+        {
+            groupInfo->fileId = nw::snd::SoundArchive::INVALID_ID; //? Mark as invalid so it won't be used later
         }
 
         mGroupList.pushBack(group);
@@ -2046,7 +2056,6 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
 
         if (groupInfo->fileId != nw::snd::SoundArchive::INVALID_ID)
         {
-            // TODO: Validate
             nw::snd::internal::GroupFileReader reader(soundArchive.detail_GetFileAddress(groupInfo->fileId));
             if (groupInfo->fileId >= soundArchive.detail_GetFileCount())
             {
@@ -2502,25 +2511,28 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
 
                     for (u32 j : validSorting)
                     {
-                        addGroupItem(j, true);
+                        addGroupItem(j, false);
                     }
                 }
                 else
                 {
                     for (u32 j = 0; j < reader.GetGroupItemExCount(); j++)
                     {
-                        addGroupItem(j, true);
+                        addGroupItem(j, false);
                     }
 
-                    PopupMgr::instance()->pushCurrentItemError("Failed to find real Items order");
+                    if (reader.GetGroupItemExCount() > 0)
+                    {
+                        PopupMgr::instance()->pushCurrentItemError("Failed to find real Items order");
+                    }
+                    else if (reader.GetGroupItemCount() > 0)
+                    {
+                        PopupMgr::instance()->pushCurrentItemError("Group has internal files but no Items");
+                    }
                 }
             }
 
             updateList(group->getItemInfoList());
-        }
-        else
-        {
-            PopupMgr::instance()->pushCurrentItemError("Couldn't find the BFGRP file referenced");
         }
     }
 
@@ -4883,7 +4895,7 @@ void Bfsar::save_(sead::FileHandle& handle)
             bool b = sead::Path::getDirectoryName(&dir, getFilePath());
             SEAD_ASSERT(b);
 
-            sead::FormatFixedSafeString<512> savePath("%s/%s.save.bfstm", dir.cstr(), path); // TODO
+            sead::FormatFixedSafeString<512> savePath("%s/%s.save.bfstm", dir.cstr(), path); // TODO: Remove
             // sead::FormatFixedSafeString<512> savePath("%s/%s", dir.cstr(), path);
             //SEAD_PRINT("%s\n", savePath.cstr());
 

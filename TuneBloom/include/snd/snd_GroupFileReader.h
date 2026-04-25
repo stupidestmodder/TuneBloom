@@ -17,6 +17,8 @@ class GroupFileReader
 public:
     explicit GroupFileReader(const void* groupFile);
 
+    bool IsInitialized() const { return mIsInitialized; }
+
     u32 GetGroupItemCount() const { return mInfoBlockBody->GetGroupItemInfoCount(); }
     const nw::snd::internal::GroupFile::GroupItemInfo* GetGroupItemInfo(u32 index) const { return mInfoBlockBody->GetGroupItemInfo(index); }
     bool ReadGroupItemLocationInfo(GroupItemLocationInfo* out, u32 index) const;
@@ -42,6 +44,7 @@ public:
     const GroupFile::InfoBlockBody* mInfoBlockBody;
     const GroupFile::FileBlockBody* mFileBlockBody;
     const GroupFile::InfoExBlockBody* mInfoExBlockBody;
+    bool mIsInitialized;
 };
 
 } } } // namespace nw::snd::internal
