@@ -570,7 +570,7 @@ void SoundPlayer::drawParameters()
                 ImGui::BeginDisabled();
             }
 
-            if (ImGui::DragFloat("Sequence Tempo Ratio", &mSeqTempoRatio, 0.01f, 0.0f, sead::Mathf::maxNumber()))
+            if (ImGui::DragFloat("Sequence Tempo Ratio", &mSeqTempoRatio, 0.01f, 0.0f, 1000.0f, nullptr, ImGuiSliderFlags_AlwaysClamp))
             {
                 mSequencePlayer.setTempoRatio(mSeqTempoRatio);
             }
