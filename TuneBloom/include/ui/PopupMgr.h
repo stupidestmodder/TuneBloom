@@ -63,6 +63,11 @@ public:
         mCurrentProcessItem = item;
     }
 
+    Item* getCurrentProcessItem_()
+    {
+        return mCurrentProcessItem;
+    }
+
     void pushCurrentItemError(const sead::SafeString& error);
 
 private:

@@ -183,6 +183,12 @@ void SequenceFile::drawFileUI()
 
     delete[] labels;
 
+    if (mLoadError)
+    {
+        mLoadError = false;
+        compile_();
+    }
+
     if (ImGui::Button(ICON_LC_PLAY))
     {
         mSeqTextInfo.reset();
@@ -433,7 +439,10 @@ bool SequenceFile::doRead(const void* fileAddr)
 
     mOffsetToLine = offsetToLine;
 
-    mIsValid = true;
+    if (!mLoadError)
+    {
+        mIsValid = true;
+    }
 
     return true;
 }
@@ -1164,6 +1173,7 @@ struct CommandInfo
     bool allowTimeChange;
     bool allowIf;
     ArgCallback argCallback;
+    u32 version = 0x00010000;
 };
 
 MmlCommandBase* BuildCommand(const std::string& cmdName, const CommandInfo& info, std::vector<std::string> extensions, std::vector<std::string> args, std::string& errorMsg)
@@ -1926,8 +1936,8 @@ std::pair<std::string, CommandInfo> GetCommandInfo(const std::string& cmd)
         { "biquad_type",     { &TCommandFactory<MmlCommandBiquadType>,    SeqArgType::ArgU8,    1, true,  false, true, nullptr } },
         { "biquad_value",    { &TCommandFactory<MmlCommandBiquadValue>,   SeqArgType::ArgU8,    1, true,  false, true, nullptr } },
         { "bank_select",     { &TCommandFactory<MmlCommandBankSelect>,    SeqArgType::ArgU8,    1, true,  false, true, nullptr } },
-        { "mod_phase",       { &TCommandFactory<MmlCommandModPhase>,      SeqArgType::ArgU8,    1, true,  false, true, nullptr } },
-        { "mod_curve",       { &TCommandFactory<MmlCommandModCurve>,      SeqArgType::ArgU8,    1, true,  false, true, nullptr } },
+        { "mod_phase",       { &TCommandFactory<MmlCommandModPhase>,      SeqArgType::ArgU8,    1, true,  false, true, nullptr, 0x00020000 } },
+        { "mod_curve",       { &TCommandFactory<MmlCommandModCurve>,      SeqArgType::ArgU8,    1, true,  false, true, nullptr, 0x00020000 } },
         { "frontbypass_on",  { &TCommandFactory<MmlCommandFrontBypass>,   SeqArgType::ArgBool,  0, false, false, true, nullptr } },
         { "frontbypass_off", { &TCommandFactory<MmlCommandFrontBypass>,   SeqArgType::ArgBool,  0, false, false, true, nullptr } },
         { "pan",             { &TCommandFactory<MmlCommandPan>,           SeqArgType::ArgU8,    1, true,  true,  true, nullptr } },
@@ -2049,9 +2059,19 @@ MmlCommandBase* SequenceFile::parseCommand_(const std::string& str, const std::v
     MmlCommandBase* cmd = nullptr;
 
     auto info = GetCommandInfo(str);
-    if (!info.first.empty())
+
+    const std::string& cmdName = info.first;
+    if (!cmdName.empty())
     {
-        std::string extensions = str.substr(info.first.size());
+        const CommandInfo& cmdInfo = info.second;
+        if (cmdInfo.version > sBfsar.getVersionForBfseq())
+        {
+            errorMsg = "Command '" + cmdName + "' requires BFSEQ version >= " + std::format("0x{:08X}", cmdInfo.version);
+            errorMsg += " (Current: " + std::format("0x{:08X}", sBfsar.getVersionForBfseq()) + ")";
+            return nullptr;
+        }
+
+        std::string extensions = str.substr(cmdName.size());
 
         std::vector<std::string> ext = split(extensions, "_");
         if (ext.size() > 0)
@@ -2059,7 +2079,7 @@ MmlCommandBase* SequenceFile::parseCommand_(const std::string& str, const std::v
             pop_vector(ext);
         }
 
-        cmd = BuildCommand(info.first, info.second, ext, args, errorMsg);
+        cmd = BuildCommand(cmdName, cmdInfo, ext, args, errorMsg);
     }
     else
     {

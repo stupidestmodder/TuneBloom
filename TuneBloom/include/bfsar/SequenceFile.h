@@ -32,6 +32,7 @@ public:
         , mIsValid(false)
 
         , mIsDirty(false)
+        , mLoadError(false)
         , mTextEditor(nullptr)
         , mSeqTextInfo()
         , mSeqText(nullptr)
@@ -106,6 +107,11 @@ public:
         return mStartLabel;
     }
 
+    void setLoadError_()
+    {
+        mLoadError = true;
+    }
+
 private:
     void invalidatePlayer_() const;
 
@@ -113,6 +119,7 @@ private:
     bool mIsValid;
 
     bool mIsDirty;
+    bool mLoadError;
     TextEditor* mTextEditor;
     SeqTextInfo mSeqTextInfo;
     sead::HeapSafeString* mSeqText;

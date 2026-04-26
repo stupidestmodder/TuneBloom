@@ -49,6 +49,16 @@ const char* MmlCommandModType::cTypes[MmlCommandModType::cTypeNum] = {
     "MOD_TYPE_PAN"
 };
 
+static void InvalidateSeqFile()
+{
+    Item* item = PopupMgr::instance()->getCurrentProcessItem_();
+    if (item && item->getItemType() == Item::ItemType::SequenceFile)
+    {
+        SequenceFile* seqFile = static_cast<SequenceFile*>(item);
+        seqFile->setLoadError_();
+    }
+} 
+
 MmlCommandBase* nw__snd__internal__driver__MmlParser__Parse(const u8*& trackData, nw::snd::internal::SequenceSoundFileReader& reader)
 {
     MmlParser::SeqArgType argType = MmlParser::SEQ_ARG_NONE;
@@ -205,6 +215,7 @@ MmlCommandBase* nw__snd__internal__driver__MmlParser__Parse(const u8*& trackData
                     if (sBfsar.getVersionForBfseq() < 0x00020000)
                     {
                         PopupMgr::instance()->pushCurrentItemError("Command not supported in current version: mod_phase");
+                        InvalidateSeqFile();
                     }
                     cmdInst = new MmlCommandModPhase(arg1, conditional);
                     break;
@@ -212,6 +223,7 @@ MmlCommandBase* nw__snd__internal__driver__MmlParser__Parse(const u8*& trackData
                     if (sBfsar.getVersionForBfseq() < 0x00020000)
                     {
                         PopupMgr::instance()->pushCurrentItemError("Command not supported in current version: mod_curve");
+                        InvalidateSeqFile();
                     }
                     cmdInst = new MmlCommandModCurve(arg1, conditional);
                     break;
