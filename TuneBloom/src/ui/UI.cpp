@@ -711,7 +711,7 @@ void DrawInfoUI()
         }
 
         bool setFocus = false;
-        if (notProjUI && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyDown(ImGuiKey_F))
+        if (notProjUI && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId) && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyDown(ImGuiKey_F))
         {
             sFilterActive = true;
             setFocus = true;
