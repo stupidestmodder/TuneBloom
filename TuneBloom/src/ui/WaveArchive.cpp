@@ -19,7 +19,9 @@ InstanciateItemCallback CreateWaveArchiveFunc(bool clear)
 
 void DrawWaveArchivesUI()
 {
-    DrawAllItemsUI("Wave Archive", sBfsar.getWaveArchiveList(), &CreateWaveArchiveFunc);
+    DrawAllItemsUI("Wave Archive", sBfsar.getWaveArchiveList(),
+        &CreateWaveArchiveFunc, nullptr, nullptr, GetItemFilterCallback()
+    );
 }
 
 void DrawWaveArchivePropertiesUI()

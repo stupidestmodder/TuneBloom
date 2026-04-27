@@ -649,8 +649,43 @@ void DrawProjectUI()
     ImGui::End();
 }
 
+static sead::FixedSafeString<256> sFilter;
+
+bool ItemMatchesFilter(const Item* item)
+{
+    if (sFilter.isEmpty())
+    {
+        return true;
+    }
+
+    std::string name = item->getName().cstr();
+    for (char& c : name)
+    {
+        c = std::tolower(c);
+    }
+
+    std::string filter = sFilter.cstr();
+    for (char& c : filter)
+    {
+        c = std::tolower(c);
+    }
+
+    return name.find(filter) != std::string::npos;
+}
+
+ItemFilterCallback GetItemFilterCallback()
+{
+    return !sFilter.isEmpty() ? &ItemMatchesFilter : nullptr;
+}
+
 void DrawInfoUI()
 {
+    if (ImGui::Begin("SearchBar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::InputTextWithHint("##Search", "Search...", sFilter.getBuffer(), sFilter.getBufferSize());
+    }
+    ImGui::End();
+
     bool pushPadding = sSelectedUIType != UIType::ProjectInfo;
     if (pushPadding)
     {
@@ -1446,7 +1481,9 @@ const char* SoundNamePrefixFunc(Item* item)
 
 void DrawAllSoundsUI()
 {
-    DrawAllItemsUI("Sound", sBfsar.getSoundList(), &CreateSoundFunc, &SoundNamePrefixFunc);
+    DrawAllItemsUI("Sound", sBfsar.getSoundList(),
+        &CreateSoundFunc, &SoundNamePrefixFunc, nullptr, GetItemFilterCallback()
+    );
 }
 
 const char* SoundNamePrefixFunc2(Item* item)
@@ -1475,7 +1512,7 @@ void DrawStreamSoundsUI()
         [](const Item* item)
         {
             const Sound* sound = static_cast<const Sound*>(item);
-            return sound->getSoundType() == Sound::SoundType::Strm;
+            return sound->getSoundType() == Sound::SoundType::Strm && ItemMatchesFilter(sound);
         }
     );
 }
@@ -1486,7 +1523,7 @@ void DrawWaveSoundsUI()
         [](const Item* item)
         {
             const Sound* sound = static_cast<const Sound*>(item);
-            return sound->getSoundType() == Sound::SoundType::Wave;
+            return sound->getSoundType() == Sound::SoundType::Wave && ItemMatchesFilter(sound);
         }
     );
 }
@@ -1497,7 +1534,7 @@ void DrawSequenceSoundsUI()
         [](const Item* item)
         {
             const Sound* sound = static_cast<const Sound*>(item);
-            return sound->getSoundType() == Sound::SoundType::Seq;
+            return sound->getSoundType() == Sound::SoundType::Seq && ItemMatchesFilter(sound);
         }
     );
 }
@@ -1555,7 +1592,9 @@ InstanciateItemCallback CreateSoundSetFunc(bool clear)
 
 void DrawAllSoundSetsUI()
 {
-    DrawAllItemsUI("Sound Set", sBfsar.getSoundSetList(), &CreateSoundSetFunc, &SoundSetNamePrefixFunc);
+    DrawAllItemsUI("Sound Set", sBfsar.getSoundSetList(),
+        &CreateSoundSetFunc, &SoundSetNamePrefixFunc, nullptr, GetItemFilterCallback()
+    );
 }
 
 void DrawWaveSoundSetsUI()
@@ -1564,7 +1603,7 @@ void DrawWaveSoundSetsUI()
         [](const Item* item)
         {
             const SoundSet* soundSet = static_cast<const SoundSet*>(item);
-            return soundSet->getSoundSetType() == SoundSet::SoundSetType::Wave;
+            return soundSet->getSoundSetType() == SoundSet::SoundSetType::Wave && ItemMatchesFilter(soundSet);
         }
     );
 }
@@ -1575,7 +1614,7 @@ void DrawSequenceSoundSetsUI()
         [](const Item* item)
         {
             const SoundSet* soundSet = static_cast<const SoundSet*>(item);
-            return soundSet->getSoundSetType() == SoundSet::SoundSetType::Seq;
+            return soundSet->getSoundSetType() == SoundSet::SoundSetType::Seq && ItemMatchesFilter(soundSet);
         }
     );
 }
@@ -1718,7 +1757,9 @@ void WaveFileContextMenuFunc(Item* item)
 
 void DrawWaveFilesUI()
 {
-    DrawAllItemsUI("Wave File", sBfsar.getWaveFileList(), &CreateWaveFileFunc, &WaveFileNamePrefixFunc, &WaveFileContextMenuFunc);
+    DrawAllItemsUI("Wave File", sBfsar.getWaveFileList(),
+        &CreateWaveFileFunc, &WaveFileNamePrefixFunc, &WaveFileContextMenuFunc, GetItemFilterCallback()
+    );
 
     if (sImportWaveFile && !sWavFilePath.isEmpty())
     {
@@ -1819,7 +1860,9 @@ const char* SequenceFileNamePrefixFunc(Item* item)
 
 void DrawSequenceFilesUI()
 {
-    DrawAllItemsUI("Sequence File", sBfsar.getSequenceFileList(), &CreateSequenceFileFunc, &SequenceFileNamePrefixFunc, nullptr, nullptr, true);
+    DrawAllItemsUI("Sequence File", sBfsar.getSequenceFileList(),
+        &CreateSequenceFileFunc, &SequenceFileNamePrefixFunc, nullptr, GetItemFilterCallback(), true
+    );
 }
 
 InstanciateItemCallback CreateBankFileFunc(bool clear)
@@ -1852,7 +1895,9 @@ const char* BankFileNamePrefixFunc(Item* item)
 
 void DrawBankFilesUI()
 {
-    DrawAllItemsUI("Bank File", sBfsar.getBankFileList(), &CreateBankFileFunc, &BankFileNamePrefixFunc, nullptr, nullptr, true);
+    DrawAllItemsUI("Bank File", sBfsar.getBankFileList(),
+        &CreateBankFileFunc, &BankFileNamePrefixFunc, nullptr, GetItemFilterCallback(), true
+    );
 }
 
 bool DrawVersionUI(u32* versionPtr, u32 versionByteNum)

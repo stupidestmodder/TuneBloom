@@ -64,7 +64,9 @@ InstanciateItemCallback CreateGroupFunc(bool clear)
 
 void DrawGroupsUI()
 {
-    DrawAllItemsUI("Group", sBfsar.getGroupList(), &CreateGroupFunc);
+    DrawAllItemsUI("Group", sBfsar.getGroupList(),
+        &CreateGroupFunc, nullptr, nullptr, GetItemFilterCallback()
+    );
 }
 
 void DrawGroupPropertiesUI()

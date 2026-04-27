@@ -36,7 +36,9 @@ InstanciateItemCallback CreatePlayerFunc(bool clear)
 
 void DrawPlayersUI()
 {
-    DrawAllItemsUI("Player", sBfsar.getPlayerList(), &CreatePlayerFunc);
+    DrawAllItemsUI("Player", sBfsar.getPlayerList(),
+        &CreatePlayerFunc, nullptr, nullptr, GetItemFilterCallback()
+    );
 }
 
 void DrawPlayerPropertiesUI()

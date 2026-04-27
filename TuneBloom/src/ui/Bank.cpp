@@ -69,7 +69,9 @@ const char* BankNamePrefixFunc(Item* item)
 
 void DrawBanksUI()
 {
-    DrawAllItemsUI("Bank", sBfsar.getBankList(), &CreateBankFunc, &BankNamePrefixFunc);
+    DrawAllItemsUI("Bank", sBfsar.getBankList(),
+        &CreateBankFunc, &BankNamePrefixFunc, nullptr, GetItemFilterCallback()
+    );
 }
 
 void DrawBankPropertiesUI()
