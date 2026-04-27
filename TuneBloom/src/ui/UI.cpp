@@ -651,6 +651,7 @@ void DrawProjectUI()
 
 static sead::FixedSafeString<256> sFilter;
 static bool sFilterActive = false;
+static bool sFilterCaseSensitive = false;
 
 void CloseFilter()
 {
@@ -666,15 +667,19 @@ bool ItemMatchesFilter(const Item* item)
     }
 
     std::string name = item->getName().cstr();
-    for (char& c : name)
-    {
-        c = std::tolower(c);
-    }
-
     std::string filter = sFilter.cstr();
-    for (char& c : filter)
+
+    if (!sFilterCaseSensitive)
     {
-        c = std::tolower(c);
+        for (char& c : name)
+        {
+            c = std::tolower(c);
+        }
+
+        for (char& c : filter)
+        {
+            c = std::tolower(c);
+        }
     }
 
     return name.find(filter) != std::string::npos;
@@ -726,8 +731,27 @@ void DrawInfoUI()
                     ImGui::SetKeyboardFocusHere();
                 }
 
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("   ").x - ImGui::GetStyle().ItemSpacing.x);
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("   ").x * 2.0f - ImGui::GetStyle().ItemSpacing.x * 2.0f);
                 ImGui::InputTextWithHint("##Search", "Search...", sFilter.getBuffer(), sFilter.getBufferSize(), ImGuiInputTextFlags_CharsNoBlank);
+
+                ImGui::SameLine();
+
+                bool popColor = false;
+                if (!sFilterCaseSensitive)
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 0.5f));
+                    popColor = true;
+                }
+
+                if (ImGui::Button(ICON_LC_CASE_SENSITIVE "##CaseSensitive"))
+                {
+                    sFilterCaseSensitive = !sFilterCaseSensitive;
+                }
+
+                if (popColor)
+                {
+                    ImGui::PopStyleColor();
+                }
 
                 ImGui::SameLine();
 
