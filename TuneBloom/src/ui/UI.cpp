@@ -650,6 +650,13 @@ void DrawProjectUI()
 }
 
 static sead::FixedSafeString<256> sFilter;
+static bool sFilterActive = false;
+
+void CloseFilter()
+{
+    sFilter.clear();
+    sFilterActive = false;
+}
 
 bool ItemMatchesFilter(const Item* item)
 {
@@ -680,21 +687,15 @@ ItemFilterCallback GetItemFilterCallback()
 
 void DrawInfoUI()
 {
-    if (ImGui::Begin("SearchBar", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize))
-    {
-        ImGui::InputTextWithHint("##Search", "Search...", sFilter.getBuffer(), sFilter.getBufferSize());
-    }
-    ImGui::End();
-
-    bool pushPadding = sSelectedUIType != UIType::ProjectInfo;
-    if (pushPadding)
+    bool notProjUI = sSelectedUIType != UIType::ProjectInfo;
+    if (notProjUI)
     {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
     }
 
     bool windowOpen = ImGui::Begin(ICON_LC_PEN " Info###InfoWindow", nullptr, sSelectedUIType == UIType::ProjectInfo ? ImGuiWindowFlags_NoScrollbar : 0);
 
-    if (pushPadding)
+    if (notProjUI)
     {
         ImGui::PopStyleVar();
     }
@@ -707,6 +708,35 @@ void DrawInfoUI()
 
             ImGui::End();
             return;
+        }
+
+        bool setFocus = false;
+        if (notProjUI && ImGui::IsKeyDown(ImGuiKey_ModCtrl) && ImGui::IsKeyDown(ImGuiKey_F))
+        {
+            sFilterActive = true;
+            setFocus = true;
+        }
+
+        if (notProjUI && sFilterActive)
+        {
+            if (ImGui::BeginChild("##Filter", ImVec2(0, 0), ImGuiChildFlags_AlwaysAutoResize | ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Border))
+            {
+                if (setFocus)
+                {
+                    ImGui::SetKeyboardFocusHere();
+                }
+
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("   ").x - ImGui::GetStyle().ItemSpacing.x);
+                ImGui::InputTextWithHint("##Search", "Search...", sFilter.getBuffer(), sFilter.getBufferSize(), ImGuiInputTextFlags_CharsNoBlank);
+
+                ImGui::SameLine();
+
+                if (ImGui::Button(ICON_LC_X "##CloseFilter"))
+                {
+                    CloseFilter();
+                }
+            }
+            ImGui::EndChild();
         }
 
         switch (sSelectedUIType)

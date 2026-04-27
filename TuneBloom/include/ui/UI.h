@@ -148,6 +148,8 @@ using ItemNamePrefixCallback = const char* (*)(Item* item);
 using ContextMenuCallback = void (*)(Item* item);
 using ItemFilterCallback = bool (*)(const Item* item);
 
+void CloseFilter();
+bool ItemMatchesFilter(const Item* item);
 ItemFilterCallback GetItemFilterCallback();
 
 void WarningPopup(const char* name, const char* content);

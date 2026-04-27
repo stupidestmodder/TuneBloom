@@ -330,6 +330,7 @@ bool CloseFile()
     sSubSelectedItem = nullptr;
     sSelectedItemIsSubWindow = false;
     sFileWindows.clear();
+    CloseFilter();
 
     sSoundPlayer.reset();
 
