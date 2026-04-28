@@ -246,7 +246,7 @@ void SequenceFile::drawFileUI()
         static bool sFollowSeq = true;
         static u32 sFollowTrack = 0;
 
-        ImGui::Checkbox("Follow", &sFollowSeq);
+        bool force = ImGui::Checkbox("Follow", &sFollowSeq);
 
         ImGui::SameLine();
 
@@ -274,7 +274,7 @@ void SequenceFile::drawFileUI()
         if (sFollowSeq)
         {
             const SeqTextInfo::Track& track = mSeqTextInfo.mTracks[sFollowTrack];
-            if (track.active && track.line > 0)
+            if (track.active && track.line > 0 && (track.updated || !sSoundPlayer.isPause() || force))
             {
                 mTextEditor->SetCursorPosition({ track.line - 1, 0 });
             }

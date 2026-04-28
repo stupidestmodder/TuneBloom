@@ -12,11 +12,12 @@ public:
     struct Track
     {
         Track()
-            : active(false), offset(0), line(0)
+            : active(false), updated(false), offset(0), line(0)
         {
         }
 
         bool active;
+        bool updated;
         u32 offset;
         s32 line;
     };
@@ -53,7 +54,10 @@ public:
             track = &player.getTrack_(i);
 
             mTracks[i].offset = intptr_t(track->getParserTrackParam().currentCmdAddr) - intptr_t(track->getParserTrackParam().baseAddr);
-            mTracks[i].line = offsetToLine[mTracks[i].offset];
+
+            u32 line = offsetToLine[mTracks[i].offset];
+            mTracks[i].updated = line != mTracks[i].line;
+            mTracks[i].line = line;
         }
 
         TextEditor::Markers markers;
