@@ -21,10 +21,10 @@ TuneBloom is an extremely fast & stable editor for editing NintendoWare audio fo
 
 ## Screenshots
 <div align="center">
-  <img width="400" alt="TuneBloom_PBCw2isamn" src="https://github.com/user-attachments/assets/94a97581-4367-4f2d-b4da-c75b59e53aeb" />
-  <img width="400" alt="TuneBloom_itmqEg2BRg" src="https://github.com/user-attachments/assets/c91e57e4-7f56-4f61-bc1d-723a3bcf2e7f" />
-  <img width="400" alt="TuneBloom_D5QeeacBr2" src="https://github.com/user-attachments/assets/4cfd9de4-1e5c-4fc9-9a25-60ac6f400c0c" />
-  <img width="400" alt="TuneBloom_Ot0x2Fng9e" src="https://github.com/user-attachments/assets/e84fc549-f740-4888-ae22-bd142aef731a" />
+  <img width="400" alt="TuneBloom_uO9EV9WiJK" src="https://github.com/user-attachments/assets/eb2cb3e9-25c6-4277-b07b-d2c0eb5bd10e" />
+  <img width="400" alt="TuneBloom_bMwJZT2Ix6" src="https://github.com/user-attachments/assets/42fe69ec-873e-46fb-9f50-97d502271042" />
+  <img width="400" alt="TuneBloom_fTpQKF6CJX" src="https://github.com/user-attachments/assets/e2423855-ae2e-46f2-ab9c-3cf2ddd76a26" />
+  <img width="400" alt="TuneBloom_5Ezv4aSiGf" src="https://github.com/user-attachments/assets/432d46bd-d5c1-4624-9f43-9b7fb7f25b02" />
 </div>
 
 ## Future Goals
