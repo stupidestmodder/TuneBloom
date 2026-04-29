@@ -284,8 +284,6 @@ SequenceTrack::ParseResult MmlParser::parse(SequenceTrack* track, bool doNoteOn)
             {
             case MmlCommand::MML_ALLOC_TRACK:
                 (void)Read16(&trackParam.currentAddr);
-                //SEAD_ASSERT_MSG(false, "seq: must use alloctrack in startup code");
-                //break;
                 SEAD_WARNING("seq: must use alloctrack in startup code");
                 return SequenceTrack::PARSE_RESULT_FINISH;
 
@@ -1137,9 +1135,7 @@ s32 MmlParser::ReadArg(const u8** ptr, SequenceSoundPlayer* player, SequenceTrac
 
 volatile s16* MmlParser::GetVariablePtr(SequenceSoundPlayer* player, SequenceTrack* track, int varNo)
 {
-    SEAD_ASSERT(0 <= varNo &&
-                varNo < SequenceSoundPlayer::cPlayerVariableNum + SequenceSoundPlayer::cGlobalVariableNum + SequenceTrack::cTrackVariableNum
-   );
+    if (varNo < 0) return NULL;
 
     if (varNo < SequenceSoundPlayer::cPlayerVariableNum
                + SequenceSoundPlayer::cGlobalVariableNum)

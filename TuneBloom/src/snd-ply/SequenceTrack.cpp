@@ -219,8 +219,14 @@ void SequenceTrack::releaseAllChannel(s32 release, bool stop)
         {
             if (release >= 0)
             {
-                SEAD_ASSERT(0 <= release && release <= 127);
-                channel->setRelease(static_cast<u8>(release));
+                if (0 <= release && release <= 127)
+                {
+                    channel->setRelease(static_cast<u8>(release));
+                }
+                else
+                {
+                    SEAD_WARNING("invalid release value: %d\n", release);
+                }
             }
 
             channel->release();
@@ -369,8 +375,17 @@ void SequenceTrack::pauseAllChannel(bool flag)
 
 snd::internal::driver::Channel* SequenceTrack::noteOn(s32 key, s32 velocity, s32 length, bool tieFlag)
 {
-    SEAD_ASSERT(0 <= key && key <= 127);
-    SEAD_ASSERT(0 <= velocity && velocity <= 127);
+    if (!(0 <= key && key <= 127))
+    {
+        SEAD_WARNING("invalid key value: %d\n", key);
+        return nullptr;
+    }
+
+    if (!(0 <= velocity && velocity <= 127))
+    {
+        SEAD_WARNING("invalid velocity value: %d\n", velocity);
+        return nullptr;
+    }
 
     const SequenceSoundPlayer::ParserPlayerParam& playerParam = mSequenceSoundPlayer->getParserPlayerParam();
 
