@@ -336,8 +336,14 @@ bool SoundPlayer::playSeqFile(const SequenceFile& seqFile, const sead::SafeStrin
 
         mSequencePlayer.setInitialVolume(static_cast<f32>(volume) / 127.0f);
 
+        s32 origSeqOffset = seqFile.getLabelOffset(startLabel, false);
+        if (origSeqOffset == startOffset)
+        {
+            origSeqOffset = -1;
+        }
+
         mSequencePlayer.setup(allocTracks, &mSequenceNoteOnCallback2);
-        mSequencePlayer.prepare(seqFile, startOffset, banks);
+        mSequencePlayer.prepare(seqFile, startOffset, banks, origSeqOffset);
         initPlayerParam_();
         initPlayerTrack_();
         initSeqVars_();

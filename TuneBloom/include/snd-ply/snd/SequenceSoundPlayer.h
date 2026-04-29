@@ -94,7 +94,7 @@ public:
     void deinit(bool stop = false);
     void setup(u32 allocTracks, NoteOnCallback* callback);
     void prepare(const void* seqFile, s32 seqOffset, const void** bankFiles, const void** warcFiles, const bool* warcIsIndividuals, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
-    void prepare(const SequenceFile& seqFile, s32 seqOffset, const BankFile** bankFiles, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
+    void prepare(const SequenceFile& seqFile, s32 seqOffset, const BankFile** bankFiles, s32 origSeqOffset, snd::UpdateType updateType = snd::UpdateType::AudioFrame);
 
     void pause(bool flag) override;
 
@@ -118,6 +118,11 @@ public:
     void clearPlayingFile()
     {
         mPlayingFile = nullptr;
+    }
+
+    SequenceFile* getPlayingFile_()
+    {
+        return const_cast<SequenceFile*>(mPlayingFile);
     }
 
     SequenceTrack* getPlayerTrack(s32 trackNo);

@@ -3,6 +3,8 @@
 #include "snd/MmlCommand.h"
 #include "snd/SequenceSoundPlayer.h"
 
+#include <bfsar/SequenceFile.h>
+
 #include <basis/seadWarning.h>
 #include <math/seadMathCalcCommon.h>
 #include <random/seadGlobalRandom.h>
@@ -10,6 +12,15 @@
 const f32 MOD_SPEED_BASE = 0.390625f;                   // 6.25Hz because it is x 16.
 
 bool MmlParser::mPrintVarEnabledFlag = true;
+
+void pushHistory(SequenceSoundPlayer* player, SequenceTrack* track, u32 offset)
+{
+    SequenceFile* seqFile = player->getPlayingFile_();
+    if (seqFile)
+    {
+        seqFile->getSeqTextInfo_().pushHistory(track->getPlayerTrackNo(), offset);
+    }
+};
 
 SequenceTrack::ParseResult MmlParser::parse(SequenceTrack* track, bool doNoteOn) const
 {
@@ -25,7 +36,23 @@ SequenceTrack::ParseResult MmlParser::parse(SequenceTrack* track, bool doNoteOn)
     bool useArgType = false;
     bool doExecCommand = true;
 
-    trackParam.currentCmdAddr = trackParam.currentAddr; // Custom
+    // Custom
+
+    {
+        u32 cmd = *trackParam.currentCmdAddr;
+        if ((cmd != MmlCommand::MML_IF || trackParam.cmpFlag != 0) && trackParam.currentCmdAddr != trackParam.currentAddr)
+        {
+            pushHistory(player, track, static_cast<u32>(trackParam.currentCmdAddr - trackParam.baseAddr));
+        }
+
+        if (trackParam.origAddr)
+        {
+            pushHistory(player, track, static_cast<u32>(trackParam.origAddr - trackParam.baseAddr));
+            trackParam.origAddr = nullptr;
+        }
+    }
+
+    trackParam.currentCmdAddr = trackParam.currentAddr;
 
     u32 cmd = ReadByte(&trackParam.currentAddr);
 
@@ -678,7 +705,7 @@ void MmlParser::commandProc(SequenceTrack* track, u32 command, s32 commandArg1, 
                 break;
             }
             newTrack->close();
-            newTrack->setSeqData(trackParam.baseAddr, commandArg2);
+            newTrack->setSeqData(trackParam.baseAddr, commandArg2, -1);
             newTrack->open();
             break;
         }
@@ -732,6 +759,8 @@ void MmlParser::commandProc(SequenceTrack* track, u32 command, s32 commandArg1, 
             callStack->loopCount = static_cast<u8>(commandArg1);
             callStack->loopFlag = true;
             trackParam.callStackDepth++;
+
+            callStack->parentAddress = trackParam.currentCmdAddr; // Custom
             break;
         }
 
@@ -759,6 +788,8 @@ void MmlParser::commandProc(SequenceTrack* track, u32 command, s32 commandArg1, 
 
             callStack->loopCount = loop_count;
             trackParam.currentAddr = callStack->address;
+
+            pushHistory(player, track, static_cast<u32>(callStack->parentAddress - trackParam.baseAddr)); // Custom
             break;
         }
         }

@@ -18,6 +18,7 @@ public:
         const u8* currentAddr;
 
         const u8* currentCmdAddr; // Custom
+        const u8* origAddr; // Custom
 
         bool cmpFlag;
         bool noteWaitFlag;
@@ -30,6 +31,8 @@ public:
             u8 loopCount;
             u8 padding[2];
             const u8* address;
+
+            const u8* parentAddress; // Custom
         };
 
         CallStack callStack[cCallStackDepth];
@@ -107,7 +110,7 @@ public:
 public:
     SequenceTrack();
 
-    void setSeqData(const void* seqBase, s32 seqOffset);
+    void setSeqData(const void* seqBase, s32 seqOffset, s32 origSeqOffset);
     void initParam();
 
     bool isOpened() const { return mOpenFlag; }

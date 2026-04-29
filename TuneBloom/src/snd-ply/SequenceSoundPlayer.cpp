@@ -63,6 +63,8 @@ void SequenceSoundPlayer::init()
     for (s32 trackNo = 0; trackNo < cTrackNumPerPlayer; trackNo++)
     {
         mTracks[trackNo] = nullptr;
+
+        mTrackInstances[trackNo].initParam();
     }
 
     mIsRegisterPlayerCallback = false;
@@ -110,7 +112,7 @@ void SequenceSoundPlayer::prepare(const void* seqFile, s32 seqOffset, const void
         SEAD_ASSERT(seqFile);
         nw::snd::internal::SequenceSoundFileReader reader(seqFile);
         const void* seqData = reader.GetSequenceData(); // Data block body.
-        seqTrack->setSeqData(seqData, seqOffset);
+        seqTrack->setSeqData(seqData, seqOffset, -1);
         seqTrack->open();
     }
 
@@ -128,7 +130,7 @@ void SequenceSoundPlayer::prepare(const void* seqFile, s32 seqOffset, const void
     mUpdateType = updateType;
 }
 
-void SequenceSoundPlayer::prepare(const SequenceFile& seqFile, s32 seqOffset, const BankFile** bankFiles, snd::UpdateType updateType)
+void SequenceSoundPlayer::prepare(const SequenceFile& seqFile, s32 seqOffset, const BankFile** bankFiles, s32 origSeqOffset, snd::UpdateType updateType)
 {
     if (mActiveFlag)
     {
@@ -152,7 +154,7 @@ void SequenceSoundPlayer::prepare(const SequenceFile& seqFile, s32 seqOffset, co
         const void* seqData = seqFile.getSeqBytes();
         SEAD_ASSERT(seqData);
 
-        seqTrack->setSeqData(seqData, seqOffset);
+        seqTrack->setSeqData(seqData, seqOffset, origSeqOffset);
         seqTrack->open();
     }
 

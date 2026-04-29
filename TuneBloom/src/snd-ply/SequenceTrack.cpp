@@ -22,11 +22,16 @@ void SequenceTrack::setPlayerTrackNo(s32 playerTrackNo)
     mPlayerTrackNo = static_cast<u8>(playerTrackNo);
 }
 
-void SequenceTrack::setSeqData(const void* seqBase, s32 seqOffset)
+void SequenceTrack::setSeqData(const void* seqBase, s32 seqOffset, s32 origSeqOffset)
 {
     mParserTrackParam.baseAddr = static_cast<const u8*>(seqBase);
     mParserTrackParam.currentAddr = mParserTrackParam.baseAddr + seqOffset;
     mParserTrackParam.currentCmdAddr = mParserTrackParam.currentAddr; // Custom
+
+    if (origSeqOffset > -1)
+    {
+        mParserTrackParam.origAddr = mParserTrackParam.baseAddr + origSeqOffset; // Custom
+    }
 }
 
 void SequenceTrack::initParam()
@@ -42,6 +47,7 @@ void SequenceTrack::initParam()
     mParserTrackParam.currentAddr    = nullptr;
 
     mParserTrackParam.currentCmdAddr = nullptr; // Custom
+    mParserTrackParam.origAddr = nullptr; // Custom
 
     mParserTrackParam.cmpFlag        = true;
     mParserTrackParam.noteWaitFlag   = true;

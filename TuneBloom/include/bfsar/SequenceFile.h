@@ -86,7 +86,7 @@ public:
         return mSeqBytes;
     }
 
-    u32 getLabelOffset(const sead::SafeString& label) const;
+    u32 getLabelOffset(const sead::SafeString& label, bool parsed = true) const;
     u32 getLabelAllocTracks(const sead::SafeString& label) const;
 
     std::string getLabelFromParsedOffset(u32 offset, u32 allocTrackFlags) const;
@@ -113,6 +113,11 @@ public:
     }
 
     void setCursorToLabel_(const sead::SafeString& label);
+
+    SeqTextInfo& getSeqTextInfo_()
+    {
+        return mSeqTextInfo;
+    }
 
 private:
     void invalidatePlayer_() const;

@@ -234,9 +234,11 @@ void SequenceFile::drawFileUI()
         }
     }
 
+    static bool sShowTrail = true;
+
     if (mIsValid && sSoundPlayer.getSequencePlayer().isPlayingFile(*this))
     {
-        mSeqTextInfo.update(sSoundPlayer.getSequencePlayer(), *mTextEditor, mOffsetToLine);
+        mSeqTextInfo.update(sSoundPlayer.getSequencePlayer(), *mTextEditor, mOffsetToLine, sShowTrail);
     }
 
     //if (false)
@@ -279,6 +281,10 @@ void SequenceFile::drawFileUI()
                 mTextEditor->SetCursorPosition({ track.line - 1, 0 });
             }
         }
+
+        ImGui::SameLine();
+
+        ImGui::Checkbox("Trail", &sShowTrail);
     }
 
     mTextEditor->Render("SeqText");
@@ -303,7 +309,7 @@ void SequenceFile::drawFileUI()
     }
 }
 
-u32 SequenceFile::getLabelOffset(const sead::SafeString& label) const
+u32 SequenceFile::getLabelOffset(const sead::SafeString& label, bool parsed) const
 {
     if (!mIsValid)
     {
@@ -316,7 +322,7 @@ u32 SequenceFile::getLabelOffset(const sead::SafeString& label) const
         return cInvaldOffset;
     }
 
-    return it->second.parsedOffset;
+    return parsed ? it->second.parsedOffset : it->second.offset;
 }
 
 u32 SequenceFile::getLabelAllocTracks(const sead::SafeString& label) const
