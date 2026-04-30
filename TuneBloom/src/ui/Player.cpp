@@ -196,6 +196,7 @@ void DrawPlayerUI()
 
             f32 barStartX = ImGui::GetCursorPosX();
             ImVec2 barStartScreenPos = ImGui::GetCursorScreenPos();
+            barStartScreenPos.y -= 1; // fluh
 
             ImGui::ProgressBar(progress, ImVec2(adjustSize, 0.0f), "");
 
