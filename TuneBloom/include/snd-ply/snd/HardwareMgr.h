@@ -20,7 +20,7 @@ public:
     static const u32 cSoundFrameIntervalMSEC = 3;
     static const u32 cSoundFrameIntervalUSEC = cSoundFrameIntervalMSEC * 1000;
 
-    static const u32 cSampleRate = 32000;
+    static const u32 cSampleRate = 48000;
     static const u32 cSamplePerFrame = cSampleRate * cSoundFrameIntervalMSEC / 1000;
 
     static const u32 cChannelCount = 2;
