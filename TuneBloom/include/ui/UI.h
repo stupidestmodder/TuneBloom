@@ -58,7 +58,8 @@ bool SaveFileDialog(sead::BufferedSafeString* outPath, const char* title = nullp
 extern Bfsar sBfsar;
 extern SoundPlayer sSoundPlayer;
 
-
+extern sead::FixedSafeString<260> sDroppedFilePath;
+extern bool sFileDroppedThisFrame;
 
 //
 

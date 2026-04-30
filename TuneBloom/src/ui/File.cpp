@@ -219,14 +219,28 @@ bool OpenFile()
 {
     sead::FixedSafeString<512> filePath;
 
-    const u32 filterCount = 1;
-    FileFilter filters[filterCount] = {
-        { "Sound Archive (*.bfsar)", "*.bfsar" }
-    };
-
-    if (!OpenFileDialog(&filePath, nullptr, filterCount, filters))
+    if (sFileDroppedThisFrame)
     {
-        return false;
+        filePath = sDroppedFilePath;
+        sFileDroppedThisFrame = false;
+        
+        if (!filePath.endsWith(".bfsar"))
+        {
+            PopupMgr::instance()->addPopup({ "Unsupported file format" });
+            return false;
+        }
+    }
+    else
+    {
+        const u32 filterCount = 1;
+        FileFilter filters[filterCount] = {
+            { "Sound Archive (*.bfsar)", "*.bfsar" }
+        };
+
+        if (!OpenFileDialog(&filePath, nullptr, filterCount, filters))
+        {
+            return false;
+        }
     }
 
     sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");

@@ -29,6 +29,7 @@ int main()
     sead::GameFrameworkBaseWin::CreateArg createArg;
     createArg.wait_vblank = 0;
     createArg.window_name = util::cAppName;
+    createArg.window_ex_style = WS_EX_ACCEPTFILES; // win32 for drag-and-drop
     createArg.clear_color = sead::Color4f(0.0f, 0.0f, 0.3f, 1.0f);
 
     AppFramework* framework = nullptr;

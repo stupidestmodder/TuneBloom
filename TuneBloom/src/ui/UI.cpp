@@ -37,6 +37,9 @@ void FocusPropertiesWindow()
 bool sShowSystemWindow = false;
 bool sShowDemoWindow = false;
 
+sead::FixedSafeString<260> sDroppedFilePath;
+bool sFileDroppedThisFrame = false;
+
 ItemList sFileWindows;
 
 // Windows
@@ -363,6 +366,18 @@ void DrawTuneBloomSplash(ImTextureID logoTex, ImVec2 logoSize)
 void DrawUI()
 {
     ImGuiID dockspaceId = DockSpaceOverViewport();
+
+    if (sFileDroppedThisFrame)
+    {
+        if (sBfsar.isOpen())
+        {
+            sWantsOpen = true; // open with save prompt
+        }
+        else
+        {
+            OpenFile(); // open directly
+        }
+    }
 
     DrawProjectUI();
     DrawInfoUI();
