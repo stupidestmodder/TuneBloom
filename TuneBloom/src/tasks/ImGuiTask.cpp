@@ -108,11 +108,7 @@ static LRESULT __stdcall MsgProc(HWND hWnd, u32 msg, WPARAM wParam, LPARAM lPara
         UINT fileCount = DragQueryFileA(drop, 0xFFFFFFFF, NULL, 0);
         if (fileCount > 0)
         {
-            char filePath[MAX_PATH];
-            DragQueryFileA(drop, 0, filePath, MAX_PATH);
-
-            sFileDroppedThisFrame = true;
-            sDroppedFilePath = filePath;
+            DragQueryFileA(drop, 0, sDroppedFilePath.getBuffer(), sDroppedFilePath.getBufferSize());
         }
         DragFinish(drop);
 

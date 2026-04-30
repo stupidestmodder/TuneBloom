@@ -219,16 +219,10 @@ bool OpenFile()
 {
     sead::FixedSafeString<512> filePath;
 
-    if (sFileDroppedThisFrame)
+    if (!sDroppedFilePath.isEmpty())
     {
         filePath = sDroppedFilePath;
-        sFileDroppedThisFrame = false;
-        
-        if (!filePath.endsWith(".bfsar"))
-        {
-            PopupMgr::instance()->addPopup({ "Unsupported file format" });
-            return false;
-        }
+        sDroppedFilePath.clear();
     }
     else
     {
