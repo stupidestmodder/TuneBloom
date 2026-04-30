@@ -4,10 +4,13 @@
 //#include <snd/SoundThread.h>
 
 #include <filedevice/seadPath.h>
+#include <framework/win/seadGameFrameworkBaseWin.h>
 #include <framework/seadProcessMeter.h>
 #include <gfx/gl/seadTextureGL.h>
 
 #include <Utilll.h>
+
+#include <shellapi.h>
 
 UIType sSelectedUIType = UIType::ProjectInfo;
 
@@ -37,8 +40,7 @@ void FocusPropertiesWindow()
 bool sShowSystemWindow = false;
 bool sShowDemoWindow = false;
 
-sead::FixedSafeString<260> sDroppedFilePath;
-bool sFileDroppedThisFrame = false;
+sead::FixedSafeString<512> sDroppedFilePath;
 
 ItemList sFileWindows;
 
@@ -367,7 +369,14 @@ void DrawUI()
 {
     ImGuiID dockspaceId = DockSpaceOverViewport();
 
-    if (sFileDroppedThisFrame)
+    DrawProjectUI();
+    DrawInfoUI();
+    DrawSubInfoUI();
+    DrawFileUI(dockspaceId);
+    DrawPropertiesUI();
+    DrawPlayerUI();
+
+    if (!sDroppedFilePath.isEmpty())
     {
         if (sBfsar.isOpen())
         {
@@ -378,13 +387,6 @@ void DrawUI()
             OpenFile(); // open directly
         }
     }
-
-    DrawProjectUI();
-    DrawInfoUI();
-    DrawSubInfoUI();
-    DrawFileUI(dockspaceId);
-    DrawPropertiesUI();
-    DrawPlayerUI();
 
     static bool (*sFileAction)() = nullptr;
     if (sWantsNew)
@@ -444,6 +446,8 @@ void DrawUI()
         if (ImGui::Button("Cancel", buttonSize))
         {
             ImGui::CloseCurrentPopup();
+
+            sDroppedFilePath.clear(); // clear dropped file path to prevent multiple popups
         }
 
         ImGui::EndPopup();
@@ -487,6 +491,23 @@ void DrawUI()
         }
 
         DrawTuneBloomSplash(icon, ImVec2(130, 130));
+    }
+
+    if (ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId))
+    {
+        sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(util::getFramework());
+        if (fw)
+        {
+            DragAcceptFiles(fw->getWindowHandle(), false); // prevent accepting files while a popup is open
+        }
+    }
+    else
+    {
+        sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(util::getFramework());
+        if (fw)
+        {
+            DragAcceptFiles(fw->getWindowHandle(), true);
+        }
     }
 }
 
