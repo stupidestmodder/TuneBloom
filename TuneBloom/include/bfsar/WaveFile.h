@@ -200,11 +200,21 @@ public:
     {
         u32 loopFrames = getLoopFrames();
         u32 endFrame = getLoopStartFrame(forStream) + loopFrames;
-        if (forStream && cStreamMinimumLoopFrames > loopFrames)
+        if (forStream && cStreamMinimumLoopFrames > loopFrames && loopFrames != 0)
             endFrame += loopFrames * (cStreamMinimumLoopFrames / loopFrames);
 
         return endFrame;
     }
+
+    // u32 getMaxRealFrame(bool forStream) const
+    // {
+    //     u32 loopFrames = getSampleCount() - getOriginalLoopStartFrame();
+    //     u32 endFrame = getLoopStartFrame(forStream) + loopFrames;
+    //     if (forStream && cStreamMinimumLoopFrames > loopFrames && loopFrames != 0)
+    //         endFrame += loopFrames * (cStreamMinimumLoopFrames / loopFrames);
+    //
+    //     return endFrame;
+    // }
 
     u32 getOriginalLoopStartFrame() const
     {
@@ -275,13 +285,10 @@ private:
         mUseOriginalData = false;
     }
 
+    void disposeChannels_();
     void updateLoopInfo_(bool update, bool updateStream);
-
-    static void* convert_(
-        void* data, sead::Endian::Types dataEndian, u32 samples,
-        Encoding from, Encoding to, u32* size,
-        ADPCMINFO* adpcmInfo, ADPCMINFO* adpcmInfoStream,
-        u32 loopSample, u32 loopSampleStream);
+    void rebuildSpooledData_();
+    void* convertChannel_(Channel& channel, void* data, sead::Endian::Types dataEndian, Encoding from, Encoding to, u32* size);
 
 private:
     sead::Endian::Types mDataEndian; //? For when Encoding is Pcm16

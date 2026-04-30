@@ -245,6 +245,9 @@ void WaveFile::drawUI()
         if (ImGui::Checkbox("Is Loop", &isLoop))
         {
             mIsLoop = isLoop;
+
+            rebuildSpooledData_();
+            invalidateOriginalData_();
         }
 
         if (!isLoop)
@@ -252,17 +255,29 @@ void WaveFile::drawUI()
             ImGui::BeginDisabled();
         }
 
-        u32 loopStartFrame = getOriginalLoopStartFrame();
-        if (ImGui::InputScalar("Loop Start Frame", ImGuiDataType_U32, &loopStartFrame, &cStepU32))
         {
-            if (loopStartFrame >= mLoopEndFrame)
+            u32 loopStartFrame = getOriginalLoopStartFrame();
+            ImGui::InputScalar("Loop Start Frame", ImGuiDataType_U32, &loopStartFrame, &cStepU32);
+            bool loopStartFrameCommit = ImGui::IsItemDeactivatedAfterEdit();
+
+            if (loopStartFrame != getOriginalLoopStartFrame())
             {
-                loopStartFrame = mLoopEndFrame - 1;
+                mLoopStartFrame = loopStartFrame;
+                disposeChannels_();
             }
 
-            mLoopStartFrame = loopStartFrame;
+            if (loopStartFrameCommit)
+            {
+                if (loopStartFrame >= mLoopEndFrame)
+                {
+                    loopStartFrame = mLoopEndFrame - 1;
+                }
 
-            updateLoopInfo_(true, true);
+                mLoopStartFrame = loopStartFrame;
+
+                rebuildSpooledData_();
+                invalidateOriginalData_();
+            }
         }
 
         if (!isLoop)
@@ -270,9 +285,11 @@ void WaveFile::drawUI()
             ImGui::EndDisabled();
         }
 
-        u32 loopEndFrame = getOriginalLoopEndFrame();
-        if (ImGui::InputScalar("Loop End Frame", ImGuiDataType_U32, &loopEndFrame, &cStepU32))
         {
+            u32 loopEndFrame = getOriginalLoopEndFrame();
+            ImGui::InputScalar("Loop End Frame", ImGuiDataType_U32, &loopEndFrame, &cStepU32);
+            bool loopEndFrameCommit = ImGui::IsItemDeactivatedAfterEdit();
+
             if (loopEndFrame > mSampleCount)
             {
                 loopEndFrame = mSampleCount;
@@ -282,12 +299,24 @@ void WaveFile::drawUI()
                 loopEndFrame = 1;
             }
 
-            if (mLoopStartFrame >= loopEndFrame)
+            if (loopEndFrame != getOriginalLoopEndFrame())
             {
-                mLoopStartFrame = loopEndFrame - 1;
+                mLoopEndFrame = loopEndFrame;
+                disposeChannels_();
             }
 
-            mLoopEndFrame = loopEndFrame;
+            if (loopEndFrameCommit)
+            {
+                if (mLoopStartFrame >= loopEndFrame)
+                {
+                    mLoopStartFrame = loopEndFrame - 1;
+                }
+
+                mLoopEndFrame = loopEndFrame;
+
+                rebuildSpooledData_();
+                invalidateOriginalData_();
+            }
         }
     }
 
@@ -360,15 +389,7 @@ void WaveFile::drawUI()
 
         if (ImGui::Button("Convert", buttonSize))
         {
-            {
-                snd::internal::driver::SoundThreadLock lock;
-
-                for (u32 i = 0; i < mChannels.size(); i++)
-                {
-                    Channel* channel = mChannels.nth(i);
-                    channel->dispose_();
-                }
-            }
+            disposeChannels_();
 
             for (u32 i = 0; i < mChannels.size(); i++)
             {
@@ -376,50 +397,23 @@ void WaveFile::drawUI()
 
                 channel->freeSeekInfo_();
 
-                if (mEncoding == Encoding::Pcm16 || mEncoding == Encoding::Pcm8 &&
-                    sEncoding == Encoding::DspAdpcm)
-                {
-                    WaveFile::buildSeekTable_(
-                        channel->getData(), getSampleCount(),
-                        mEncoding == Encoding::Pcm16 ? snd::SampleFormat::PcmS16 : snd::SampleFormat::PcmS8,
-                        *channel
-                    );
-                }
-
-                if (mUseOriginalData)
-                {
-                    const void* src = channel->getData();
-                    channel->mData = new u8[channel->getDataSize()];
-                    sead::MemUtil::copy(const_cast<void*>(channel->mData), src, channel->getDataSize());
-                }
-
                 u32 dataSize = 0;
-                ADPCMINFO adpcmInfo;
-                sead::MemUtil::fillZero(&adpcmInfo, sizeof(adpcmInfo));
-                ADPCMINFO adpcmInfoStream;
-                sead::MemUtil::fillZero(&adpcmInfoStream, sizeof(adpcmInfoStream));
-
-                if (mEncoding == Encoding::DspAdpcm)
-                {
-                    FillAdpcmInfo(&adpcmInfo, channel->getAdpcmParam(), channel->getAdpcmLoopParam());
-                    FillAdpcmInfo(&adpcmInfoStream, channel->getAdpcmParam(true), channel->getAdpcmLoopParam(true));
-                }
-
-                channel->mOwnsData = true;
-                channel->mData = WaveFile::convert_(
-                    const_cast<void*>(channel->getData()), mDataEndian, mSampleCount,
+                void* newData = convertChannel_(
+                    *channel, const_cast<void*>(channel->getData()), mDataEndian,
                     mEncoding, sEncoding,
-                    &dataSize, &adpcmInfo, &adpcmInfoStream,
-                    getLoopStartFrame(false), getLoopStartFrame(true)
+                    &dataSize
                 );
-                channel->mDataSize = dataSize;
 
-                if (sEncoding == Encoding::DspAdpcm)
+                if (channel->mOwnsData && channel->mData && channel->mData != newData)
                 {
-                    FillAdpcmParam(&channel->mAdpcmParam, &channel->mAdpcmLoopParam, adpcmInfo);
-                    FillAdpcmParam(&channel->mAdpcmParamStream, &channel->mAdpcmLoopParamStream, adpcmInfoStream);
+                    delete[] static_cast<const u8*>(channel->mData);
                 }
-                else if (sEncoding == Encoding::Pcm16)
+
+                channel->mData = newData;
+                channel->mDataSize = dataSize;
+                channel->mOwnsData = true;
+
+                if (sEncoding == Encoding::Pcm16)
                 {
                     mDataEndian = sead::Endian::getHostEndian();
                 }
@@ -474,8 +468,6 @@ bool WaveFile::doRead(const void* fileAddr)
         PopupMgr::instance()->pushCurrentItemError(msg);
         return false;
     }
-
-    // TODO: Handle spool frames
 
     mUseOriginalData = true;
     mOriginalDataSize = reader.mHeader->GetDataBlock()->header.size - 0x20;
@@ -857,23 +849,17 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
         SEAD_ASSERT(channel);
 
         u32 dataSize = 0;
-        ADPCMINFO adpcmInfo;
-        sead::MemUtil::fillZero(&adpcmInfo, sizeof(adpcmInfo));
-        ADPCMINFO adpcmInfoStream;
-        sead::MemUtil::fillZero(&adpcmInfoStream, sizeof(adpcmInfoStream));
-
-        if (encoding == Encoding::DspAdpcm)
-        {
-            WaveFile::buildSeekTable_(channels[i], sampleCount, sampleFormat, *channel);
-        }
-
         channel->mOwnsData = true;
-        channel->mData = WaveFile::convert_(
-            channels[i], endian, mSampleCount,
+        channel->mData = convertChannel_(
+            *channel, channels[i], endian,
             sampleFormat == snd::SampleFormat::PcmS8 ? Encoding::Pcm8 : Encoding::Pcm16, encoding,
-            &dataSize, &adpcmInfo, &adpcmInfoStream,
-            getLoopStartFrame(false), getLoopStartFrame(true)
+            &dataSize
         );
+
+        if (channel->mData != channels[i])
+        {
+            delete[] channels[i];
+        }
 
         if (dataSize == 0)
         {
@@ -881,12 +867,6 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
         }
 
         channel->mDataSize = dataSize;
-
-        if (encoding == Encoding::DspAdpcm)
-        {
-            FillAdpcmParam(&channel->mAdpcmParam, &channel->mAdpcmLoopParam, adpcmInfo);
-            FillAdpcmParam(&channel->mAdpcmParamStream, &channel->mAdpcmLoopParamStream, adpcmInfoStream);
-        }
     }
 
     return true;
@@ -1109,6 +1089,17 @@ void WaveFile::buildSeekTable_(const void* samples, u32 sampleCount, snd::Sample
     }
 }
 
+void WaveFile::disposeChannels_()
+{
+    snd::internal::driver::SoundThreadLock lock;
+
+    for (u32 i = 0; i < mChannels.size(); i++)
+    {
+        Channel* channel = mChannels.nth(i);
+        channel->dispose_();
+    }
+}
+
 void WaveFile::updateLoopInfo_(bool update, bool updateStream)
 {
     if (mEncoding != Encoding::DspAdpcm)
@@ -1145,172 +1136,160 @@ void WaveFile::updateLoopInfo_(bool update, bool updateStream)
     }
 }
 
-void* WaveFile::convert_(
-    void* data, sead::Endian::Types dataEndian, u32 samples,
-    Encoding from, Encoding to, u32* size,
-    ADPCMINFO* adpcmInfo, ADPCMINFO* adpcmInfoStream,
-    u32 loopSample, u32 loopSampleStream)
+void WaveFile::rebuildSpooledData_()
+{
+    disposeChannels_();
+
+    for (u32 i = 0; i < mChannels.size(); i++)
+    {
+        Channel* channel = mChannels.nth(i);
+
+        u32 dataSize = 0;
+        void* newData = convertChannel_(
+            *channel, const_cast<void*>(channel->getData()), mDataEndian,
+            mEncoding, mEncoding, &dataSize
+        );
+
+        if (channel->mOwnsData && channel->mData && channel->mData != newData)
+        {
+            delete[] static_cast<const u8*>(channel->mData);
+        }
+
+        channel->mData = newData;
+        channel->mDataSize = dataSize;
+        channel->mOwnsData = true;
+    }
+}
+
+void* WaveFile::convertChannel_(
+    Channel& channel, void* data, sead::Endian::Types dataEndian,
+    Encoding from, Encoding to, u32* size)
 {
     SEAD_ASSERT(size);
 
-    if (from == to)
+    if (from != Encoding::Pcm8 && from != Encoding::Pcm16 && from != Encoding::DspAdpcm)
     {
-        // TODO: Set size
-        return data;
+        SEAD_ASSERT_MSG(false, "Invalid source encoding");
+        return nullptr;
     }
 
-    auto Pcm8ToPcm16 = [&](void* dataSrc) -> void*
+    //? Get base PCM data
+    u32 baseSamples = mSampleCount;
+    s16* basePcm = new s16[baseSamples];
     {
-        s8* src = static_cast<s8*>(dataSrc);
-        s16* dst = new s16[samples];
-
-        for (u32 i = 0; i < samples; i++)
+        if (from == WaveFile::Encoding::Pcm16)
         {
-            dst[i] = s16(src[i] << 8);
-        }
+            s16* src = static_cast<s16*>(data);
 
-        delete[] src;
-
-        *size = sizeof(s16) * samples;
-        return dst;
-    };
-
-    auto Pcm8ToAdpcm = [&](void* dataSrc) -> void*
-    {
-        SEAD_ASSERT(adpcmInfo);
-
-        u32 bufferSize = getBytesForAdpcmBuffer(samples);
-
-        s16* src = static_cast<s16*>(Pcm8ToPcm16(dataSrc));
-        u8* dst = new u8[bufferSize];
-
-        encode(src, dst, adpcmInfo, samples);
-        getLoopContext(dst, adpcmInfo, loopSample);
-
-        sead::MemUtil::copy(adpcmInfoStream, adpcmInfo, sizeof(ADPCMINFO));
-        getLoopContext(dst, adpcmInfoStream, loopSampleStream);
-
-        delete[] src;
-
-        *size = bufferSize;
-        return dst;
-    };
-
-    auto Pcm16ToPcm8 = [&](void* dataSrc) -> void*
-    {
-        s16* src = static_cast<s16*>(dataSrc);
-        s8* dst = new s8[samples];
-
-        for (u32 i = 0; i < samples; i++)
-        {
-            dst[i] = s8(sead::Endian::toHostS16(dataEndian, src[i]) >> 8);
-        }
-
-        delete[] src;
-
-        *size = sizeof(s8) * samples;
-        return dst;
-    };
-
-    auto Pcm16ToAdpcm = [&](void* dataSrc) -> void*
-    {
-        SEAD_ASSERT(adpcmInfo);
-
-        u32 bufferSize = getBytesForAdpcmBuffer(samples);
-
-        s16* src = static_cast<s16*>(dataSrc);
-        u8* dst = new u8[bufferSize];
-
-        if (dataEndian != sead::Endian::getHostEndian())
-        {            
-            for (u32 i = 0; i < samples; i++)
+            if (dataEndian == sead::Endian::getHostEndian())
             {
-                src[i] = sead::Endian::toHostS16(dataEndian, src[i]);
+                sead::MemUtil::copy(basePcm, src, baseSamples * sizeof(s16));
+            }
+            else
+            {
+                for (u32 i = 0; i < baseSamples; i++)
+                {
+                    basePcm[i] = sead::Endian::toHostS16(dataEndian, src[i]);
+                }
             }
         }
-
-        encode(src, dst, adpcmInfo, samples);
-        getLoopContext(dst, adpcmInfo, loopSample);
-
-        sead::MemUtil::copy(adpcmInfoStream, adpcmInfo, sizeof(ADPCMINFO));
-        getLoopContext(dst, adpcmInfoStream, loopSampleStream);
-
-        delete[] src;
-
-        *size = bufferSize;
-        return dst;
-    };
-
-    auto AdpcmToPcm16 = [&](void* dataSrc) -> void*
-    {
-        SEAD_ASSERT(adpcmInfo);
-
-        u8* src = static_cast<u8*>(dataSrc);
-        s16* dst = new s16[samples];
-
-        decode(src, dst, adpcmInfo, samples);
-
-        delete[] src;
-
-        *size = sizeof(s16) * samples;
-        return dst;
-    };
-
-    auto AdpcmToPcm8 = [&](void* dataSrc) -> void*
-    {
-        SEAD_ASSERT(adpcmInfo);
-
-        s8* dst = static_cast<s8*>(Pcm16ToPcm8(AdpcmToPcm16(dataSrc)));
-
-        *size = sizeof(s8) * samples;
-        return dst;
-    };
-
-    switch (from)
-    {
-        case Encoding::Pcm8:
+        else if (from == WaveFile::Encoding::Pcm8)
         {
-            switch (to)
+            s8* src = static_cast<s8*>(data);
+
+            for (u32 i = 0; i < baseSamples; i++)
             {
-                case Encoding::Pcm16:
-                    return Pcm8ToPcm16(data);
-
-                case Encoding::DspAdpcm:
-                    return Pcm8ToAdpcm(data);
+                basePcm[i] = s16(src[i] << 8);
             }
-
-            break;
         }
-
-        case Encoding::Pcm16:
+        else if (from == WaveFile::Encoding::DspAdpcm)
         {
-            switch (to)
-            {
-                case Encoding::Pcm8:
-                    return Pcm16ToPcm8(data);
+            u8* src = static_cast<u8*>(data);
 
-                case Encoding::DspAdpcm:
-                    return Pcm16ToAdpcm(data);
-            }
+            ADPCMINFO adpcmInfo;
+            sead::MemUtil::fillZero(&adpcmInfo, sizeof(adpcmInfo));
+            FillAdpcmInfo(&adpcmInfo, channel.getAdpcmParam(), channel.getAdpcmLoopParam());
 
-            break;
-        }
-
-        case Encoding::DspAdpcm:
-        {
-            switch (to)
-            {
-                case Encoding::Pcm8:
-                    return AdpcmToPcm8(data);
-
-                case Encoding::Pcm16:
-                    return AdpcmToPcm16(data);
-            }
-
-            break;
+            decode(src, basePcm, &adpcmInfo, baseSamples);
         }
     }
 
-    SEAD_ASSERT_MSG(false, "Invalid Encoding");
-    return data;
+    //? Spool PCM data
+    u32 totalSamples = mIsLoop ? sead::Mathu::max(baseSamples, getLoopEndFrame(true)) : baseSamples;
+    s16* spooledPcm = new s16[totalSamples];
+    {
+        u32 copyCount = mIsLoop ? sead::Mathu::min(baseSamples, getOriginalLoopEndFrame()) : baseSamples;
+        sead::MemUtil::copy(spooledPcm, basePcm, copyCount * sizeof(s16));
+
+        if (mIsLoop)
+        {
+            u32 loopStart = getOriginalLoopStartFrame();
+            u32 loopEnd = getOriginalLoopEndFrame();
+            u32 loopFrames = loopEnd - loopStart;
+
+            if (loopFrames > 0)
+            {
+                u32 currentPos = loopEnd;
+                while (currentPos < totalSamples)
+                {
+                    u32 spoolIdx = loopStart + ((currentPos - loopEnd) % loopFrames);
+
+                    spooledPcm[currentPos] = basePcm[spoolIdx];
+                    currentPos++;
+                }
+            }
+        }
+
+        delete[] basePcm;
+    }
+
+    //? Encode to destination format
+    void* dstData = nullptr;
+    {
+        if (to == Encoding::Pcm16)
+        {
+            dstData = spooledPcm; //? Endian match host, so we can directly use spooled PCM data
+            *size = sizeof(s16) * totalSamples;
+        }
+        else if (to == Encoding::Pcm8)
+        {
+            s8* dst = new s8[totalSamples];
+            for (u32 i = 0; i < totalSamples; i++)
+            {
+                dst[i] = s8(spooledPcm[i] >> 8);
+            }
+
+            dstData = dst;
+            *size = sizeof(s8) * totalSamples;
+
+            delete[] spooledPcm;
+        }
+        else if (to == Encoding::DspAdpcm)
+        {
+            WaveFile::buildSeekTable_(spooledPcm, totalSamples, snd::SampleFormat::PcmS16, channel);
+
+            u32 bufferSize = getBytesForAdpcmBuffer(totalSamples);
+            u8* dst = new u8[bufferSize];
+
+            ADPCMINFO adpcmInfo;
+            sead::MemUtil::fillZero(&adpcmInfo, sizeof(adpcmInfo));
+
+            encode(spooledPcm, dst, &adpcmInfo, totalSamples);
+            getLoopContext(dst, &adpcmInfo, getLoopStartFrame(false));
+
+            ADPCMINFO adpcmInfoStream;
+            sead::MemUtil::copy(&adpcmInfoStream, &adpcmInfo, sizeof(ADPCMINFO));
+            getLoopContext(dst, &adpcmInfoStream, getLoopStartFrame(true));
+
+            FillAdpcmParam(&channel.mAdpcmParam, &channel.mAdpcmLoopParam, adpcmInfo);
+            FillAdpcmParam(&channel.mAdpcmParamStream, &channel.mAdpcmLoopParamStream, adpcmInfoStream);
+
+            dstData = dst;
+            *size = bufferSize;
+
+            delete[] spooledPcm;
+        }
+    }
+
+    return dstData;
 }
