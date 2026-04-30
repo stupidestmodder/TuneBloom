@@ -9,6 +9,10 @@
 #include <framework/seadProcessMeter.h>
 #include <heap/seadExpHeap.h>
 
+#include <ui/UI.h>
+
+#include <shellapi.h>
+
 #include "icons/IconsLucide.h"
 
 SEAD_TASK_SINGLETON_DISPOSER_IMPL(ImGuiTask);
@@ -97,6 +101,20 @@ static void HookRendererSwapBuffers(ImGuiViewport* viewport, void*)
 
 static LRESULT __stdcall MsgProc(HWND hWnd, u32 msg, WPARAM wParam, LPARAM lParam)
 {
+    if (msg == WM_DROPFILES)
+    {
+        HDROP drop = (HDROP)wParam;
+
+        UINT fileCount = DragQueryFileA(drop, 0xFFFFFFFF, NULL, 0);
+        if (fileCount > 0)
+        {
+            DragQueryFileA(drop, 0, sDroppedFilePath.getBuffer(), sDroppedFilePath.getBufferSize());
+        }
+        DragFinish(drop);
+
+        return 0;
+    }
+
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return 1;
 

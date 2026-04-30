@@ -219,14 +219,22 @@ bool OpenFile()
 {
     sead::FixedSafeString<512> filePath;
 
-    const u32 filterCount = 1;
-    FileFilter filters[filterCount] = {
-        { "Sound Archive (*.bfsar)", "*.bfsar" }
-    };
-
-    if (!OpenFileDialog(&filePath, nullptr, filterCount, filters))
+    if (!sDroppedFilePath.isEmpty())
     {
-        return false;
+        filePath = sDroppedFilePath;
+        sDroppedFilePath.clear();
+    }
+    else
+    {
+        const u32 filterCount = 1;
+        FileFilter filters[filterCount] = {
+            { "Sound Archive (*.bfsar)", "*.bfsar" }
+        };
+
+        if (!OpenFileDialog(&filePath, nullptr, filterCount, filters))
+        {
+            return false;
+        }
     }
 
     sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");

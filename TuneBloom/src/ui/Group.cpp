@@ -277,6 +277,9 @@ u32 Group::ItemInfo::getLoadFlag() const
     return LoadFlag::LoadAll;
 }
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++11-narrowing"
+
 u32 Group::ItemInfo::getLoadFlagForSequence_() const
 {
     static u32 sFlags[(u32)SequenceItems::Num] = {
@@ -326,6 +329,8 @@ u32 Group::ItemInfo::getLoadFlagForWaveArchive_() const
     SEAD_ASSERT(mLoadItem < (u32)WaveArchiveItems::Num);
     return sFlags[mLoadItem];
 }
+
+#pragma clang diagnostic pop
 
 const char** Group::ItemInfo::getLoadItems(u32* outCount) const
 {

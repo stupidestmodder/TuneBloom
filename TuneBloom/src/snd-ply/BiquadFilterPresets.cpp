@@ -2,6 +2,9 @@
 
 #include <math/seadMathCalcCommon.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wc++11-narrowing"
+
 namespace snd { namespace internal {
 
 // LPF coefficients
@@ -550,6 +553,8 @@ const BiquadFilterCallback::Coefficients BiquadFilterBpf2048::cCoefficientsTable
     { 0x0864, 0x0000, 0xf79c, 0x6793, 0xd0c8 },
     { 0x06b6, 0x0000, 0xf94a, 0x6a89, 0xcd6c }
 };
+
+#pragma clang diagnostic pop
 
 void BiquadFilterLpf::getCoefficients(s32 type, f32 value, BiquadFilterCallback::Coefficients* coef) const
 {
