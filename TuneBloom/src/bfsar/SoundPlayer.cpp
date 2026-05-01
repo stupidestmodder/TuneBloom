@@ -415,6 +415,12 @@ bool SoundPlayer::playBankNote(u8 key, u8 velocity, const BankFile::VelocityRegi
         return false;
     }
 
+    if (waveFile->getChannels().isEmpty())
+    {
+        PopupMgr::instance()->addPopup({ "Wave File has no channels", nullptr });
+        return false;
+    }
+
     snd::internal::driver::SoundThreadLock lock;
     stopAllPlayersWithoutLock(false);
 
@@ -429,6 +435,7 @@ bool SoundPlayer::playBankNote(u8 key, u8 velocity, const BankFile::VelocityRegi
     mSampleCount = mWavePlayer.getSampleCount();
     mSampleRate = mWavePlayer.getSampleRate();
 
+    mPlayingSound = nullptr;
     mPlayingWaveFile = waveFile;
 
     return true;
