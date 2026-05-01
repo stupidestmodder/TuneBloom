@@ -244,7 +244,7 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
 
     //if (false)
     {
-        if (ImGui::IsWindowFocused() && selectedItem && &list == selectedItem->list())
+        if (ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow) && selectedItem && &list == selectedItem->list())
         {
             if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
             {
@@ -276,6 +276,11 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
                         sSelectedItemIsSubWindow = false;
                     }
                 }
+            }
+
+            if (ImGui::IsKeyPressed(ImGuiKey_G))
+            {
+                sScrollItem = selectedItem;
             }
 
             if (canEdit && ImGui::IsKeyPressed(ImGuiKey_Delete) && sSubSelectedItem == nullptr && sSelectedItemIsSubWindow == false)
