@@ -331,8 +331,41 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
             popColor = true;
         }
 
+        const char* postFix = "";
+        if ((item == sSoundPlayer.getPlayingSound() || (!sSoundPlayer.getPlayingSound() && item == sSoundPlayer.getPlayingWaveFile())) && sSoundPlayer.isActive())
+        {
+            static u32 sAnim = 0;
+            static u32 sStep = 2;
+            static const u32 cSteps = 3;
+
+            static const char* cAnims[cSteps] = {
+                " " ICON_LC_VOLUME,
+                " " ICON_LC_VOLUME_1,
+                " " ICON_LC_VOLUME_2
+            };
+
+            if (!sSoundPlayer.isPause())
+            {
+                sAnim++;
+
+                if (sAnim >= 20)
+                {
+                    sAnim = 0;
+                    sStep++;
+
+                    if (sStep >= cSteps)
+                    {
+                        sStep = 0;
+                    }
+                }
+            }
+
+            postFix = cAnims[sStep];
+        }
+
         bool selected = selectedItem == item;
-        if (ImGui::Selectable(sead::FormatFixedSafeString<256>("%s%s", namePrefix, name.cstr()).cstr(), selected))
+        sead::FormatFixedSafeString<256> selName("%s%s%s", namePrefix, name.cstr(), postFix);
+        if (ImGui::Selectable(selName.cstr(), selected))
         {
             selectedItem = item;
             FocusPropertiesWindow();

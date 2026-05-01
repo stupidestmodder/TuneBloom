@@ -5,6 +5,11 @@
 
 Sound::~Sound()
 {
+    if (this == sSoundPlayer.getPlayingSound())
+    {
+        sSoundPlayer.resetPlayingSound();
+    }
+
     if (this == sSoundPlayer.getLastPlayedSound())
     {
         sSoundPlayer.resetLastPlayedSound();

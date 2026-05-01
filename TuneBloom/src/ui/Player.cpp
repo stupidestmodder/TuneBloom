@@ -342,4 +342,6 @@ void DrawPlayerUI()
         sSoundPlayer.drawSeqVars();
     }
     ImGui::End();
+
+    sSoundPlayer.update();
 }

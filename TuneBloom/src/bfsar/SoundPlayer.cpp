@@ -8,6 +8,14 @@
 
 #include <imgui/imgui.h>
 
+void SoundPlayer::update()
+{
+    if (mPlayingSound && !isActive())
+    {
+        mPlayingSound = nullptr;
+    }
+}
+
 void SoundPlayer::stopAllPlayers(bool stop)
 {
     snd::internal::driver::SoundThreadLock lock;
@@ -31,6 +39,7 @@ bool SoundPlayer::playSound(const Sound* sound, u32 startOffsetSample)
 {
     SEAD_ASSERT(sound);
     mLastPlayedSound = sound;
+    mPlayingSound = nullptr;
 
     switch (sound->getSoundType())
     {
@@ -69,7 +78,6 @@ bool SoundPlayer::playSeqSound(const Sound* sound)
     if (!seqFileItem)
     {
         PopupMgr::instance()->addPopup({ "No Sequence File attached", nullptr });
-        //SEAD_PRINT("No sequence file attached\n");
         return false;
     }
 
@@ -103,6 +111,7 @@ bool SoundPlayer::playSeqSound(const Sound* sound)
     }
 
     sSelectedItem = const_cast<Sound*>(sound);
+    mPlayingSound = sound;
 
     return true;
 }
@@ -112,7 +121,6 @@ bool SoundPlayer::playStrmSound(const Sound* sound)
     if (sound->getStreamSoundInfo().getStreamType() != Sound::StreamSoundInfo::StreamType::NwStreamBinary)
     {
         PopupMgr::instance()->addPopup({ "Only BFSTM streams are supported", nullptr });
-        //SEAD_PRINT("Only BFSTM sounds are supported atm\n");
         return false;
     }
 
@@ -260,6 +268,7 @@ bool SoundPlayer::playStrmSound(const Sound* sound)
     }
 
     sSelectedItem = const_cast<Sound*>(sound);
+    mPlayingSound = sound;
 
     return true;
 }
@@ -270,13 +279,16 @@ bool SoundPlayer::playWaveSound(const Sound* sound, u32 startOffsetSample)
     if (!waveFile)
     {
         PopupMgr::instance()->addPopup({ "No Wave File attached", nullptr });
-        //SEAD_PRINT("No wave file attached\n");
         return false;
     }
 
-    playWaveFile(*static_cast<const WaveFile*>(waveFile), -1, sound, startOffsetSample);
+    if (!playWaveFile(*static_cast<const WaveFile*>(waveFile), -1, sound, startOffsetSample))
+    {
+        return false;
+    }
 
     sSelectedItem = const_cast<Sound*>(sound);
+    mPlayingSound = sound;
 
     return true;
 }
@@ -351,6 +363,7 @@ bool SoundPlayer::playSeqFile(const SequenceFile& seqFile, const sead::SafeStrin
         mSampleCount = 0;
         mSampleRate = 0;
 
+        mPlayingSound = nullptr;
         mPlayingWaveFile = nullptr;
     }
 
@@ -385,6 +398,7 @@ bool SoundPlayer::playWaveFile(const WaveFile& wave, s32 channel, const Sound* s
         mSampleCount = mWavePlayer.getSampleCount();
         mSampleRate = mWavePlayer.getSampleRate();
 
+        mPlayingSound = nullptr;
         mPlayingWaveFile = &wave;
     }
 

@@ -20,6 +20,7 @@ public:
         , mBiquadValue(0.0f)
         , mSeqTempoRatio(1.0f)
 
+        , mPlayingSound(nullptr)
         , mLastPlayedSound(nullptr)
         , mPlayingWaveFile(nullptr)
         , mCurrentPlayer(nullptr)
@@ -36,6 +37,8 @@ public:
     {
         // reset();
     }
+
+    void update();
 
     void stopAllPlayers(bool stop);
     void stopAllPlayersWithoutLock(bool stop);
@@ -59,6 +62,8 @@ public:
     f32 getVolume() const { return mVolume; }
     void setVolume(f32 volume);
 
+    const Sound* getPlayingSound() const { return mPlayingSound; }
+    void resetPlayingSound() { mPlayingSound = nullptr; }
     const Sound* getLastPlayedSound() const { return mLastPlayedSound; }
     void resetLastPlayedSound() { mLastPlayedSound = nullptr; }
     const WaveFile* getPlayingWaveFile() const { return mPlayingWaveFile; }
@@ -129,6 +134,7 @@ private:
     SeqVarInfo mPlayerVars[SequenceSoundPlayer::cPlayerVariableNum];
     SeqVarInfo mTrackVars[SequenceSoundPlayer::cTrackNumPerPlayer][SequenceTrack::cTrackVariableNum];
 
+    const Sound* mPlayingSound;
     const Sound* mLastPlayedSound;
     const WaveFile* mPlayingWaveFile;
     BasicSoundPlayer* mCurrentPlayer;
