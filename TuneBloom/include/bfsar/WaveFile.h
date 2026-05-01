@@ -46,6 +46,7 @@ public:
             , mData(nullptr)
             , mDataSize(0)
             , mOriginalDataOffset(0)
+            , mFullData(nullptr)
             , mSeekInfo(nullptr)
             , mSeekInfoBlocks(0)
         {
@@ -91,6 +92,16 @@ public:
             return mSeekInfoBlocks;
         }
 
+        const void* getFullData_() const
+        {
+            return mFullData;
+        }
+
+        void setFullData_(const void* fullData)
+        {
+            mFullData = fullData;
+        }
+
     private:
         void dispose_();
         void freeSeekInfo_();
@@ -100,6 +111,8 @@ public:
         const void* mData;
         u32 mDataSize;
         s32 mOriginalDataOffset;
+
+        const void* mFullData; // For when mLoopEndFrame < mSampleCount, to keep the full data alive for loop editing
 
         snd::DspAdpcmParam mAdpcmParam;
         snd::internal::DspAdpcmLoopParam mAdpcmLoopParam;
@@ -288,7 +301,7 @@ private:
     void disposeChannels_();
     void updateLoopInfo_(bool update, bool updateStream);
     void rebuildSpooledData_();
-    void* convertChannel_(Channel& channel, void* data, sead::Endian::Types dataEndian, Encoding from, Encoding to, u32* size);
+    void* convertChannel_(Channel& channel, const void* data, sead::Endian::Types dataEndian, Encoding from, Encoding to, u32* size);
 
 private:
     sead::Endian::Types mDataEndian; //? For when Encoding is Pcm16

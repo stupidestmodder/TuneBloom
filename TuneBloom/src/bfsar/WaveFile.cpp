@@ -24,8 +24,14 @@ WaveFile::Channel::~Channel()
 
     if (mOwnsData && mData)
     {
-        delete[] mData;
+        delete[] static_cast<const u8*>(mData);
         mData = nullptr;
+    }
+
+    if (mFullData)
+    {
+        delete[] static_cast<const u8*>(mFullData);
+        mFullData = nullptr;
     }
 
     freeSeekInfo_();
@@ -258,7 +264,7 @@ void WaveFile::drawUI()
         {
             u32 loopStartFrame = getOriginalLoopStartFrame();
             ImGui::InputScalar("Loop Start Frame", ImGuiDataType_U32, &loopStartFrame, &cStepU32);
-            bool loopStartFrameCommit = ImGui::IsItemDeactivatedAfterEdit();
+            bool loopStartFrameCommit = ImGui::IsItemDeactivatedAfterEdit() && loopStartFrame != getOriginalLoopStartFrame();
 
             if (loopStartFrame != getOriginalLoopStartFrame())
             {
@@ -288,7 +294,7 @@ void WaveFile::drawUI()
         {
             u32 loopEndFrame = getOriginalLoopEndFrame();
             ImGui::InputScalar("Loop End Frame", ImGuiDataType_U32, &loopEndFrame, &cStepU32);
-            bool loopEndFrameCommit = ImGui::IsItemDeactivatedAfterEdit();
+            bool loopEndFrameCommit = ImGui::IsItemDeactivatedAfterEdit() && loopEndFrame != getOriginalLoopEndFrame();
 
             if (loopEndFrame > mSampleCount)
             {
@@ -399,7 +405,7 @@ void WaveFile::drawUI()
 
                 u32 dataSize = 0;
                 void* newData = convertChannel_(
-                    *channel, const_cast<void*>(channel->getData()), mDataEndian,
+                    *channel, channel->getData(), mDataEndian,
                     mEncoding, sEncoding,
                     &dataSize
                 );
@@ -1146,7 +1152,7 @@ void WaveFile::rebuildSpooledData_()
 
         u32 dataSize = 0;
         void* newData = convertChannel_(
-            *channel, const_cast<void*>(channel->getData()), mDataEndian,
+            *channel, channel->getData(), mDataEndian,
             mEncoding, mEncoding, &dataSize
         );
 
@@ -1167,7 +1173,7 @@ void WaveFile::rebuildSpooledData_()
 }
 
 void* WaveFile::convertChannel_(
-    Channel& channel, void* data, sead::Endian::Types dataEndian,
+    Channel& channel, const void* data, sead::Endian::Types dataEndian,
     Encoding from, Encoding to, u32* size)
 {
     SEAD_ASSERT(size);
@@ -1181,10 +1187,17 @@ void* WaveFile::convertChannel_(
     //? Get base PCM data
     u32 baseSamples = mSampleCount;
     s16* basePcm = new s16[baseSamples];
+    bool shouldPreserveFullData = getOriginalLoopEndFrame() < baseSamples;
     {
-        if (from == WaveFile::Encoding::Pcm16)
+        if (channel.getFullData_())
         {
-            s16* src = static_cast<s16*>(data);
+            data = channel.getFullData_();
+            from = Encoding::Pcm16; //? Full data is always in Pcm16 format
+        }
+
+        if (from == Encoding::Pcm16)
+        {
+            const s16* src = static_cast<const s16*>(data);
 
             if (dataEndian == sead::Endian::getHostEndian())
             {
@@ -1198,24 +1211,24 @@ void* WaveFile::convertChannel_(
                 }
             }
         }
-        else if (from == WaveFile::Encoding::Pcm8)
+        else if (from == Encoding::Pcm8)
         {
-            s8* src = static_cast<s8*>(data);
+            const s8* src = static_cast<const s8*>(data);
 
             for (u32 i = 0; i < baseSamples; i++)
             {
                 basePcm[i] = s16(src[i] << 8);
             }
         }
-        else if (from == WaveFile::Encoding::DspAdpcm)
+        else if (from == Encoding::DspAdpcm)
         {
-            u8* src = static_cast<u8*>(data);
+            const u8* src = static_cast<const u8*>(data);
 
             ADPCMINFO adpcmInfo;
             sead::MemUtil::fillZero(&adpcmInfo, sizeof(adpcmInfo));
             FillAdpcmInfo(&adpcmInfo, channel.getAdpcmParam(), channel.getAdpcmLoopParam());
 
-            decode(src, basePcm, &adpcmInfo, baseSamples);
+            decode(const_cast<u8*>(src), basePcm, &adpcmInfo, baseSamples);
         }
     }
 
@@ -1243,6 +1256,23 @@ void* WaveFile::convertChannel_(
                     currentPos++;
                 }
             }
+        }
+
+        if (shouldPreserveFullData)
+        {
+            if (!channel.getFullData_())
+            {
+                // TODO: Preserve data instead of allocating new PCM data ?
+                void* fullData = new s16[baseSamples];
+                sead::MemUtil::copy(fullData, basePcm, baseSamples * sizeof(s16));
+
+                channel.setFullData_(fullData);
+            }
+        }
+        else
+        {
+            delete[] static_cast<const u8*>(channel.getFullData_());
+            channel.setFullData_(nullptr);
         }
 
         delete[] basePcm;
