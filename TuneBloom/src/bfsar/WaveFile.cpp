@@ -727,25 +727,28 @@ u32 WaveFile::doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool 
     return fileSize;
 }
 
-bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
+bool WaveFile::readRiffWavInfo(RiffWaveInfo* out)
 {
+    SEAD_ASSERT(out);
+    out->isValid = false;
+
     sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");
     SEAD_ASSERT(device);
 
     sead::FileHandle handle;
-    device->tryOpen(&handle, path, sead::FileDevice::FileOpenFlag::eReadOnly, 0);
+    device->tryOpen(&handle, out->path, sead::FileDevice::FileOpenFlag::eReadOnly, 0);
 
     if (!handle.getDevice())
     {
-        sead::FormatFixedSafeString<512> msg("Couldn't open file\n%s", path.cstr());
+        sead::FormatFixedSafeString<512> msg("Couldn't open file\n%s", out->path.cstr());
         PopupMgr::instance()->addPopup({ msg });
         return false;
     }
 
-    sead::Endian::Types endian = sead::Endian::eLittle; // RIFF wave files are always little endian... or they should
+    out->endian = sead::Endian::eLittle; // RIFF wave files are always little endian... or they should
 
     sead::FileDeviceReadStream stream(&handle, sead::Stream::Modes::eBinary);
-    stream.setBinaryEndian(endian);
+    stream.setBinaryEndian(out->endian);
 
     char riff[4];
     stream.readMemBlock(riff, 4);
@@ -756,7 +759,7 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
         return false;
     }
 
-    stream.readU32(); // File Size
+    out->fileSize = stream.readU32();
 
     char wave[4];
     stream.readMemBlock(wave, 4);
@@ -776,35 +779,34 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
         return false;
     }
 
-    stream.readU32(); // Chunk Size
+    out->chunkSize = stream.readU32();
 
-    u16 format = stream.readU16();
-    if (format != 1) // (1 = Pcm)
+    out->format = stream.readU16();
+    if (out->format != 1) // (1 = Pcm)
     {
         PopupMgr::instance()->addPopup({ "Only Pcm .wav files supported" });
         return false;
     }
 
-    u16 numChannels = stream.readU16();
-    if (numChannels > snd::cWaveChannelMax)
+    out->numChannels = stream.readU16();
+    if (out->numChannels > snd::cWaveChannelMax)
     {
         PopupMgr::instance()->addPopup({ "Only mono and stereo .wav files supported" });
         return false;
     }
 
-    u32 sampleRate = stream.readU32();
+    out->sampleRate = stream.readU32();
+    out->byteRate = stream.readU32();
+    out->blockAlign = stream.readU16();
 
-    stream.readU32(); // Byte Rate
-
-    stream.readU16(); // Block Align
-
-    u16 bitsPerSample = stream.readU16();
-    if (bitsPerSample != 8 && bitsPerSample != 16)
+    out->bitsPerSample = stream.readU16();
+    if (out->bitsPerSample != 8 && out->bitsPerSample != 16)
     {
         PopupMgr::instance()->addPopup({ "Only Pcm8 and Pcm16 .wav files supported" });
         return false;
     }
 
+    // TODO: Search and find 'data' block instead of assuming it's the first one
     char data[4];
     stream.readMemBlock(data, 4);
 
@@ -814,10 +816,47 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
         return false;
     }
 
-    u32 sampleBytes = stream.readU32();
+    out->sampleBytes = stream.readU32();
+    out->dataStart = handle.getCurrentSeekPos();
 
-    snd::SampleFormat sampleFormat = bitsPerSample == 8 ? snd::SampleFormat::PcmS8 : snd::SampleFormat::PcmS16;
-    u32 sampleCount = sampleBytes / numChannels / (bitsPerSample / 8);
+    out->sampleFormat = out->bitsPerSample == 8 ? snd::SampleFormat::PcmS8 : snd::SampleFormat::PcmS16;
+    out->sampleCount = out->sampleBytes / out->numChannels / (out->bitsPerSample / 8);
+
+    // TODO: Loop info ?
+    out->isLoop = false;
+    out->loopStartFrame = 0;
+    out->loopEndFrame = out->sampleCount;
+
+    out->isValid = true;
+
+    return true;
+}
+
+bool WaveFile::readWavFile(const RiffWaveInfo& info, Encoding encoding)
+{
+    if (!info.isValid)
+    {
+        PopupMgr::instance()->addPopup({ "Invalid .wav info" });
+        return false;
+    }
+
+    sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");
+    SEAD_ASSERT(device);
+
+    sead::FileHandle handle;
+    device->tryOpen(&handle, info.path, sead::FileDevice::FileOpenFlag::eReadOnly, 0);
+
+    if (!handle.getDevice())
+    {
+        sead::FormatFixedSafeString<512> msg("Couldn't open file\n%s", info.path.cstr());
+        PopupMgr::instance()->addPopup({ msg });
+        return false;
+    }
+
+    sead::FileDeviceReadStream stream(&handle, sead::Stream::Modes::eBinary);
+    stream.setBinaryEndian(info.endian);
+    stream.rewind();
+    stream.skip(info.dataStart);
 
     {
         snd::internal::driver::SoundThreadLock lock;
@@ -829,15 +868,15 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
 
     u8* channels[snd::cWaveChannelMax] = { nullptr, nullptr };
 
-    if (numChannels == 1)
+    if (info.numChannels == 1)
     {
-        u8* samples = new u8[sampleBytes];
-        stream.readMemBlock(samples, sampleBytes);
+        u8* samples = new u8[info.sampleBytes];
+        stream.readMemBlock(samples, info.sampleBytes);
 
         //? Convert from unsigned Pcm8 to signed Pcm8
-        if (sampleFormat == snd::SampleFormat::PcmS8)
+        if (info.sampleFormat == snd::SampleFormat::PcmS8)
         {
-            for (u32 i = 0; i < sampleCount; i++)
+            for (u32 i = 0; i < info.sampleCount; i++)
             {
                 samples[i] = samples[i] - 128;
             }
@@ -847,25 +886,25 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
     }
     else
     {
-        for (u32 i = 0; i < numChannels; i++)
+        for (u32 i = 0; i < info.numChannels; i++)
         {
-            channels[i] = new u8[sampleBytes / numChannels];
+            channels[i] = new u8[info.sampleBytes / info.numChannels];
         }
 
-        u8* samples = new u8[sampleBytes];
-        stream.readMemBlock(samples, sampleBytes);
+        u8* samples = new u8[info.sampleBytes];
+        stream.readMemBlock(samples, info.sampleBytes);
 
-        for (u32 i = 0; i < sampleCount; i++)
+        for (u32 i = 0; i < info.sampleCount; i++)
         {
-            for (u32 ch = 0; ch < numChannels; ch++)
+            for (u32 ch = 0; ch < info.numChannels; ch++)
             {
-                switch (sampleFormat)
+                switch (info.sampleFormat)
                 {
                     case snd::SampleFormat::PcmS8:
                     {
                         u8* channel = channels[ch];
 
-                        channel[i] = samples[i * numChannels + ch];
+                        channel[i] = samples[i * info.numChannels + ch];
                         channel[i] -= 128; //? Convert from unsigned Pcm8 to signed Pcm8
                         break;
                     }
@@ -875,7 +914,7 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
                         s16* channel = (s16*)channels[ch];
                         s16* samples16 = (s16*)samples;
 
-                        channel[i] = samples16[i * numChannels + ch];
+                        channel[i] = samples16[i * info.numChannels + ch];
                         break;
                     }
                 }
@@ -885,18 +924,18 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
         delete[] samples;
     }
 
-    mDataEndian = endian;
+    mDataEndian = info.endian;
     mEncoding = encoding;
-    mSampleRate = sampleRate;
-    mSampleCount = sampleCount;
+    mSampleRate = info.sampleRate;
+    mSampleCount = info.sampleCount;
 
-    // TODO: Loop info ?
-    mLoopStartFrame = 0;
-    mLoopEndFrame = mSampleCount;
+    mIsLoop = info.isLoop;
+    mLoopStartFrame = info.loopStartFrame;
+    mLoopEndFrame = info.loopEndFrame;
 
     mIsLoopDirty = false;
 
-    for (u32 i = 0; i < numChannels; i++)
+    for (u32 i = 0; i < info.numChannels; i++)
     {
         Channel* channel = mChannels.birthBack();
         SEAD_ASSERT(channel);
@@ -904,8 +943,8 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
         u32 dataSize = 0;
         channel->mOwnsData = true;
         channel->mData = convertChannel_(
-            *channel, channels[i], endian,
-            sampleFormat == snd::SampleFormat::PcmS8 ? Encoding::Pcm8 : Encoding::Pcm16, encoding,
+            *channel, channels[i], info.endian,
+            info.sampleFormat == snd::SampleFormat::PcmS8 ? Encoding::Pcm8 : Encoding::Pcm16, encoding,
             &dataSize
         );
 
@@ -916,7 +955,7 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
 
         if (dataSize == 0)
         {
-            dataSize = sampleBytes / numChannels;
+            dataSize = info.sampleBytes / info.numChannels;
         }
 
         channel->mDataSize = dataSize;

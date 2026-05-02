@@ -1709,16 +1709,55 @@ void DrawSequenceSoundSetsUI()
     );
 }
 
+void DrawWaveImportInfo(WaveFile::Encoding* encoding, WaveFile::RiffWaveInfo* info)
+{
+    const ImU32 cStepU32 = 1;
+
+    if (ImGui::Combo("Encoding", (s32*)encoding, WaveFile::sEncodingTypes, IM_ARRAYSIZE(WaveFile::sEncodingTypes)))
+    {
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::Checkbox("Is Loop", &info->isLoop))
+    {
+    }
+
+    if (!info->isLoop)
+    {
+        ImGui::BeginDisabled();
+    }
+
+    // TODO: Cap
+
+    u32 loopStartFrame = info->isLoop ? info->loopStartFrame : 0;
+    if (ImGui::InputScalar("Loop Start Frame", ImGuiDataType_U32, &loopStartFrame, &cStepU32))
+    {
+        info->loopStartFrame = loopStartFrame;
+    }
+
+    if (!info->isLoop)
+    {
+        ImGui::EndDisabled();
+    }
+
+    u32 loopEndFrame = info->loopEndFrame;
+    if (ImGui::InputScalar("Loop End Frame", ImGuiDataType_U32, &loopEndFrame, &cStepU32))
+    {
+        info->loopEndFrame = loopEndFrame;
+    }
+}
+
 InstanciateItemCallback CreateWaveFileFunc(bool clear)
 {
-    static sead::FixedSafeString<512> sWavFilePath;
+    static WaveFile::RiffWaveInfo sRiffWaveInfo;
     static sead::FixedSafeString<512> sFileName;
     static bool sAskForPath = true;
     static WaveFile::Encoding sEncoding = WaveFile::Encoding::DspAdpcm;
 
     if (clear)
     {
-        sWavFilePath.clear();
+        sRiffWaveInfo.clear();
         sFileName.clear();
         sAskForPath = true;
         sEncoding = WaveFile::Encoding::DspAdpcm;
@@ -1733,10 +1772,16 @@ InstanciateItemCallback CreateWaveFileFunc(bool clear)
 
         sAskForPath = false;
 
-        if (OpenFileDialog(&sWavFilePath, nullptr, filterCount, filters))
+        if (OpenFileDialog(&sRiffWaveInfo.path, nullptr, filterCount, filters))
         {
             sEncoding = WaveFile::Encoding::DspAdpcm;
-            sead::Path::getFileName(&sFileName, sWavFilePath);
+            sead::Path::getFileName(&sFileName, sRiffWaveInfo.path);
+
+            bool success = WaveFile::readRiffWavInfo(&sRiffWaveInfo);
+            if (!success)
+            {
+                return nullptr;
+            }
         }
         else
         {
@@ -1746,9 +1791,7 @@ InstanciateItemCallback CreateWaveFileFunc(bool clear)
 
     ImGui::Text("Import '%s'", sFileName.cstr());
 
-    if (ImGui::Combo("Encoding", (s32*)&sEncoding, WaveFile::sEncodingTypes, IM_ARRAYSIZE(WaveFile::sEncodingTypes)))
-    {
-    }
+    DrawWaveImportInfo(&sEncoding, &sRiffWaveInfo);
 
     auto doCreate = []() -> Item*
     {
@@ -1756,7 +1799,12 @@ InstanciateItemCallback CreateWaveFileFunc(bool clear)
         waveFile->setEnableName(true);
         waveFile->getName() = sFileName;
 
-        bool success = waveFile->readWavFile(sWavFilePath, sEncoding);
+        if (!sRiffWaveInfo.isLoop)
+        {
+            sRiffWaveInfo.loopStartFrame = 0;
+        }
+
+        bool success = waveFile->readWavFile(sRiffWaveInfo, sEncoding);
         if (!success)
         {
             delete waveFile;
@@ -1785,7 +1833,7 @@ static const char* WaveFileNamePrefixFunc(Item* item)
 
 static WaveFile::Encoding sEncoding = WaveFile::Encoding::DspAdpcm;
 static WaveFile* sImportWaveFile = nullptr;
-static sead::FixedSafeString<512> sWavFilePath;
+static WaveFile::RiffWaveInfo sRiffWaveInfo;
 static sead::FixedSafeString<512> sWavFileName;
 
 void WaveFileContextMenuFunc(Item* item)
@@ -1807,7 +1855,7 @@ void WaveFileContextMenuFunc(Item* item)
     if (ImGui::MenuItem("Replace"))
     {
         sImportWaveFile = nullptr;
-        sWavFilePath.clear();
+        sRiffWaveInfo.clear();
         sWavFileName.clear();
 
         const u32 filterCount = 1;
@@ -1815,11 +1863,15 @@ void WaveFileContextMenuFunc(Item* item)
             { "Wave (*.wav)", "*.wav" }
         };
 
-        if (OpenFileDialog(&sWavFilePath, nullptr, filterCount, filters))
+        if (OpenFileDialog(&sRiffWaveInfo.path, nullptr, filterCount, filters))
         {
-            sEncoding = WaveFile::Encoding::DspAdpcm;
-            sImportWaveFile = wave;
-            sead::Path::getFileName(&sWavFileName, sWavFilePath);
+            bool success = WaveFile::readRiffWavInfo(&sRiffWaveInfo);
+            if (success)
+            {
+                sEncoding = WaveFile::Encoding::DspAdpcm;
+                sImportWaveFile = wave;
+                sead::Path::getFileName(&sWavFileName, sRiffWaveInfo.path);
+            }
         }
     }
 
@@ -1850,7 +1902,7 @@ void DrawWaveFilesUI()
         &CreateWaveFileFunc, &WaveFileNamePrefixFunc, &WaveFileContextMenuFunc, GetItemFilterCallback()
     );
 
-    if (sImportWaveFile && !sWavFilePath.isEmpty())
+    if (sImportWaveFile && !sRiffWaveInfo.path.isEmpty())
     {
         ImGui::OpenPopup("WavImport");
     }
@@ -1862,9 +1914,7 @@ void DrawWaveFilesUI()
     {
         ImGui::Text("Replace with '%s'", sWavFileName.cstr());
 
-        if (ImGui::Combo("Encoding", (s32*)&sEncoding, WaveFile::sEncodingTypes, IM_ARRAYSIZE(WaveFile::sEncodingTypes)))
-        {
-        }
+        DrawWaveImportInfo(&sEncoding, &sRiffWaveInfo);
 
         ImGui::Separator();
 
@@ -1872,14 +1922,19 @@ void DrawWaveFilesUI()
 
         if (ImGui::Button("Replace", buttonSize))
         {
-            bool success = sImportWaveFile->readWavFile(sWavFilePath, sEncoding);
+            if (!sRiffWaveInfo.isLoop)
+            {
+                sRiffWaveInfo.loopStartFrame = 0;
+            }
+
+            bool success = sImportWaveFile->readWavFile(sRiffWaveInfo, sEncoding);
             if (success)
             {
                 sImportWaveFile->getName() = sWavFileName;
             }
 
             sImportWaveFile = nullptr;
-            sWavFilePath.clear();
+            sRiffWaveInfo.clear();
             sWavFileName.clear();
 
             ImGui::CloseCurrentPopup();
@@ -1890,7 +1945,7 @@ void DrawWaveFilesUI()
         if (ImGui::Button("Cancel", buttonSize))
         {
             sImportWaveFile = nullptr;
-            sWavFilePath.clear();
+            sRiffWaveInfo.clear();
             sWavFileName.clear();
 
             ImGui::CloseCurrentPopup();

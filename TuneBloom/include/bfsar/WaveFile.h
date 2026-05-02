@@ -112,7 +112,7 @@ public:
         u32 mDataSize;
         s32 mOriginalDataOffset;
 
-        const void* mFullData; // For when mLoopEndFrame < mSampleCount, to keep the full data alive for loop editing
+        const void* mFullData; // For when mLoopEndFrame < mSampleCount, to keep the full data alive for loop editing (Not spooled !)
 
         snd::DspAdpcmParam mAdpcmParam;
         snd::internal::DspAdpcmLoopParam mAdpcmLoopParam;
@@ -127,6 +127,59 @@ public:
         friend class WaveFile;
 
         friend bool ReadStreamWaves(Sound* sound, const void* strmFile);
+    };
+
+    struct RiffWaveInfo
+    {
+        RiffWaveInfo()
+        {
+            clear();
+        }
+
+        void clear()
+        {
+            isValid = false;
+            path.clear();
+            endian = sead::Endian::eLittle;
+            fileSize = 0;
+            chunkSize = 0;
+            format = 0;
+            numChannels = 0;
+            sampleRate = 0;
+            byteRate = 0;
+            blockAlign = 0;
+            bitsPerSample = 0;
+            sampleBytes = 0;
+            sampleCount = 0;
+            sampleFormat = snd::SampleFormat::PcmS16;
+            dataStart = 0;
+            isLoop = false;
+            loopStartFrame = 0;
+            loopEndFrame = 0;
+        }
+
+        bool isValid;
+
+        // In
+        sead::FixedSafeString<512> path;
+
+        // Out
+        sead::Endian::Types endian;
+        u32 fileSize;
+        u32 chunkSize;
+        u16 format;
+        u16 numChannels;
+        u32 sampleRate;
+        u32 byteRate;
+        u16 blockAlign;
+        u16 bitsPerSample;
+        u32 sampleBytes;
+        u32 sampleCount;
+        snd::SampleFormat sampleFormat;
+        u32 dataStart;
+        bool isLoop;
+        u32 loopStartFrame;
+        u32 loopEndFrame;
     };
 
     static const char* sEncodingTypes[3];
@@ -177,7 +230,9 @@ private:
     u32 doWrite(sead::FileHandle* handle, sead::WriteStream* stream, bool isLast) const override;
 
 public:
-    bool readWavFile(const sead::SafeString& path, Encoding encoding);
+    static bool readRiffWavInfo(RiffWaveInfo* out);
+
+    bool readWavFile(const RiffWaveInfo& info, Encoding encoding);
     bool writeWavFile(const sead::SafeString& path, s32 channelIdx = -1);
 
     static bool isOriginalLoopAvailable(u32 version)
