@@ -1757,7 +1757,6 @@ InstanciateItemCallback CreateWaveFileFunc(bool clear)
         waveFile->getName() = sFileName;
 
         bool success = waveFile->readWavFile(sWavFilePath, sEncoding);
-        SEAD_PRINT("Wav Import: %d\n", success);
         if (!success)
         {
             delete waveFile;
@@ -1874,8 +1873,10 @@ void DrawWaveFilesUI()
         if (ImGui::Button("Replace", buttonSize))
         {
             bool success = sImportWaveFile->readWavFile(sWavFilePath, sEncoding);
-            SEAD_PRINT("Wav Import: %d\n", success);
-            sImportWaveFile->getName() = sWavFileName;
+            if (success)
+            {
+                sImportWaveFile->getName() = sWavFileName;
+            }
 
             sImportWaveFile = nullptr;
             sWavFilePath.clear();

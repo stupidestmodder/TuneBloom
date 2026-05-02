@@ -737,6 +737,8 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
 
     if (!handle.getDevice())
     {
+        sead::FormatFixedSafeString<512> msg("Couldn't open file\n%s", path.cstr());
+        PopupMgr::instance()->addPopup({ msg });
         return false;
     }
 
@@ -750,6 +752,7 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
 
     if (sead::MemUtil::compare(riff, "RIFF", 4) != 0)
     {
+        PopupMgr::instance()->addPopup({ "Invalid 'RIFF' header" });
         return false;
     }
 
@@ -760,6 +763,7 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
 
     if (sead::MemUtil::compare(wave, "WAVE", 4) != 0)
     {
+        PopupMgr::instance()->addPopup({ "Invalid 'WAVE' header" });
         return false;
     }
 
@@ -768,20 +772,23 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
 
     if (sead::MemUtil::compare(fmt, "fmt ", 4) != 0)
     {
+        PopupMgr::instance()->addPopup({ "Invalid 'fmt ' header" });
         return false;
     }
 
     stream.readU32(); // Chunk Size
 
     u16 format = stream.readU16();
-    if (format != 1)
+    if (format != 1) // (1 = Pcm)
     {
+        PopupMgr::instance()->addPopup({ "Only Pcm .wav files supported" });
         return false;
     }
 
     u16 numChannels = stream.readU16();
     if (numChannels > snd::cWaveChannelMax)
     {
+        PopupMgr::instance()->addPopup({ "Only mono and stereo .wav files supported" });
         return false;
     }
 
@@ -794,6 +801,7 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
     u16 bitsPerSample = stream.readU16();
     if (bitsPerSample != 8 && bitsPerSample != 16)
     {
+        PopupMgr::instance()->addPopup({ "Only Pcm8 and Pcm16 .wav files supported" });
         return false;
     }
 
@@ -802,6 +810,7 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
 
     if (sead::MemUtil::compare(data, "data", 4) != 0)
     {
+        PopupMgr::instance()->addPopup({ "Invalid 'data' header" });
         return false;
     }
 
