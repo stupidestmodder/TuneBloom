@@ -9,6 +9,8 @@
 #include <ui/PopupMgr.h>
 #include <ui/UI.h>
 
+#include <imgui/imgui_custom.h>
+
 #include <filedevice/seadFileDeviceMgr.h>
 
 const char* WaveFile::sEncodingTypes[3] = {
@@ -83,6 +85,8 @@ const Item* WaveFile::validate(sead::BufferedSafeString& error) const
             error = "Invalid Encoding";
             return this;
     }
+
+    const_cast<WaveFile*>(this)->updateLoop(); // dude this is like, so awesome
 
     if (getLoopEndFrame(false) <= getLoopStartFrame(false))
     {
@@ -250,10 +254,19 @@ void WaveFile::drawUI()
         bool isLoop = getIsLoop();
         if (ImGui::Checkbox("Is Loop", &isLoop))
         {
+            disposeChannels_();
+            
             mIsLoop = isLoop;
+            if (mLoopStartFrame != 0)
+            {
+                mIsLoopDirty = true;
+            }
+        }
 
-            rebuildSpooledData_();
-            invalidateOriginalData_();
+        if (mIsLoopDirty)
+        {
+            ImGui::SameLine();
+            HelpMarker("Loop information will be recalculated");
         }
 
         if (!isLoop)
@@ -261,28 +274,57 @@ void WaveFile::drawUI()
             ImGui::BeginDisabled();
         }
 
+        auto capLoopStart = [&]()
         {
+            if (mLoopStartFrame >= mLoopEndFrame)
+            {
+                mLoopStartFrame = mLoopEndFrame - 1;
+            }
+        };
+
+        auto capLoopEnd = [&]()
+        {
+            if (mLoopEndFrame > mSampleCount)
+            {
+                mLoopEndFrame = mSampleCount;
+            }
+            else if (mLoopEndFrame < 1)
+            {
+                mLoopEndFrame = 1;
+            }
+        };
+
+        {
+            bool buttonEdited = false;
             u32 loopStartFrame = getOriginalLoopStartFrame();
-            ImGui::InputScalar("Loop Start Frame", ImGuiDataType_U32, &loopStartFrame, &cStepU32);
-            bool loopStartFrameCommit = ImGui::IsItemDeactivatedAfterEdit() && loopStartFrame != getOriginalLoopStartFrame();
+            ImGui::InputScalarCustom("Loop Start Frame", ImGuiDataType_U32, &loopStartFrame, &cStepU32, nullptr, nullptr, 0, &buttonEdited);
+
+            if (loopStartFrame >= mSampleCount)
+            {
+                loopStartFrame = mSampleCount - 1;
+            }
 
             if (loopStartFrame != getOriginalLoopStartFrame())
             {
-                mLoopStartFrame = loopStartFrame;
                 disposeChannels_();
             }
 
-            if (loopStartFrameCommit)
+            if (isLoop)
             {
-                if (loopStartFrame >= mLoopEndFrame)
+                mLoopStartFrame = loopStartFrame;
+            }
+
+            if (ImGui::IsItemDeactivatedAfterEdit() || buttonEdited)
+            {
+                mIsLoopDirty = true;
+
+                if (mLoopEndFrame <= mLoopStartFrame)
                 {
-                    loopStartFrame = mLoopEndFrame - 1;
+                    mLoopEndFrame = mLoopStartFrame + 1;
                 }
 
-                mLoopStartFrame = loopStartFrame;
-
-                rebuildSpooledData_();
-                invalidateOriginalData_();
+                capLoopEnd();
+                capLoopStart();
             }
         }
 
@@ -292,9 +334,9 @@ void WaveFile::drawUI()
         }
 
         {
+            bool buttonEdited = false;
             u32 loopEndFrame = getOriginalLoopEndFrame();
-            ImGui::InputScalar("Loop End Frame", ImGuiDataType_U32, &loopEndFrame, &cStepU32);
-            bool loopEndFrameCommit = ImGui::IsItemDeactivatedAfterEdit() && loopEndFrame != getOriginalLoopEndFrame();
+            ImGui::InputScalarCustom("Loop End Frame", ImGuiDataType_U32, &loopEndFrame, &cStepU32, nullptr, nullptr, 0, &buttonEdited);
 
             if (loopEndFrame > mSampleCount)
             {
@@ -307,21 +349,16 @@ void WaveFile::drawUI()
 
             if (loopEndFrame != getOriginalLoopEndFrame())
             {
-                mLoopEndFrame = loopEndFrame;
                 disposeChannels_();
             }
 
-            if (loopEndFrameCommit)
+            mLoopEndFrame = loopEndFrame;
+
+            if (ImGui::IsItemDeactivatedAfterEdit() || buttonEdited)
             {
-                if (mLoopStartFrame >= loopEndFrame)
-                {
-                    mLoopStartFrame = loopEndFrame - 1;
-                }
+                mIsLoopDirty = true;
 
-                mLoopEndFrame = loopEndFrame;
-
-                rebuildSpooledData_();
-                invalidateOriginalData_();
+                capLoopStart();
             }
         }
     }
@@ -421,6 +458,7 @@ void WaveFile::drawUI()
             }
 
             mDataEndian = sead::Endian::getHostEndian();
+            mIsLoopDirty = false;
 
             invalidateOriginalData_();
             mEncoding = sEncoding;
@@ -846,6 +884,8 @@ bool WaveFile::readWavFile(const sead::SafeString& path, Encoding encoding)
     mLoopStartFrame = 0;
     mLoopEndFrame = mSampleCount;
 
+    mIsLoopDirty = false;
+
     for (u32 i = 0; i < numChannels; i++)
     {
         Channel* channel = mChannels.birthBack();
@@ -1139,6 +1179,17 @@ void WaveFile::updateLoopInfo_(bool update, bool updateStream)
     }
 }
 
+void WaveFile::updateLoop()
+{
+    if (mIsLoopDirty)
+    {
+        rebuildSpooledData_();
+        invalidateOriginalData_();
+
+        mIsLoopDirty = false;
+    }
+}
+
 void WaveFile::rebuildSpooledData_()
 {
     disposeChannels_();
@@ -1164,6 +1215,7 @@ void WaveFile::rebuildSpooledData_()
     }
 
     mDataEndian = sead::Endian::getHostEndian();
+    mIsLoopDirty = false;
 }
 
 void* WaveFile::convertChannel_(

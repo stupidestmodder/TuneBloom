@@ -142,6 +142,7 @@ public:
         , mDataEndian(sead::Endian::eBig)
         , mEncoding(Encoding::DspAdpcm)
         , mIsLoop(false)
+        , mIsLoopDirty(false)
         , mSampleRate(0)
         , mLoopStartFrame(0)
         , mLoopEndFrame(0)
@@ -197,6 +198,11 @@ public:
     bool getIsLoop() const
     {
         return mIsLoop;
+    }
+
+    bool getIsLoopDirty() const
+    {
+        return mIsLoopDirty;
     }
 
     u32 getSampleRate() const
@@ -284,6 +290,8 @@ public:
         return mSampleCount;
     }
 
+    void updateLoop();
+
     static void buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel& channel);
 
 private:
@@ -307,6 +315,7 @@ private:
     sead::Endian::Types mDataEndian; //? For when Encoding is Pcm16
     Encoding mEncoding;
     bool mIsLoop;
+    bool mIsLoopDirty;
     u32 mSampleRate;
     u32 mLoopStartFrame;
     u32 mLoopEndFrame;

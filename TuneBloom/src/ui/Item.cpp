@@ -363,6 +363,8 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
             postFix = cAnims[sStep];
         }
 
+        ImVec2 cursor = ImGui::GetCursorScreenPos();
+
         bool selected = selectedItem == item;
         sead::FormatFixedSafeString<256> selName("%s%s%s", namePrefix, name.cstr(), postFix);
         if (ImGui::Selectable(selName.cstr(), selected))
@@ -378,6 +380,22 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
             {
                 sSelectedItemIsSubWindow = false;
                 sSubSelectedItem = nullptr;
+            }
+        }
+
+        if (item->getItemType() == Item::ItemType::WaveFile)
+        {
+            WaveFile* waveFile = static_cast<WaveFile*>(item);
+            if (waveFile->getIsLoopDirty())
+            {
+                f32 fontSize = ImGui::GetFontSize();
+                f32 textSize = ImGui::CalcTextSize(selName.cstr()).x;
+                f32 xPadding = ImGui::GetStyle().FramePadding.x + fontSize * 0.5f;
+                f32 lineHeight = sead::Mathf::max(sead::Mathf::min(ImGui::GetCurrentWindow()->DC.CurrLineSize.y, fontSize + ImGui::GetStyle().FramePadding.y * 2.0f), fontSize);
+
+                ImVec2 pos = ImVec2(cursor.x + textSize + xPadding, cursor.y + lineHeight * 0.67f);
+
+                ImGui::RenderBullet(ImGui::GetWindowDrawList(), pos, ImGui::GetColorU32(ImGuiCol_Text));
             }
         }
 
