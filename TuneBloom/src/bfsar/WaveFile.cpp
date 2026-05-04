@@ -444,7 +444,7 @@ void WaveFile::drawUI()
 
     if (ImGui::BeginPopupModal(ICON_LC_ALERT_TRIANGLE " Warning###ENCODING", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        ImGui::Text("Altering the wave file encoding can result in quality loss and noise.\nConvert anyway ?");
+        ImGui::Text("Altering the Wave File encoding can result in quality loss.\nConvert anyway ?");
         ImGui::Separator();
 
         ImVec2 buttonSize((ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x * 2.0f) / 2.0f, 0.0f);
