@@ -86,7 +86,10 @@ const Item* WaveFile::validate(sead::BufferedSafeString& error) const
             return this;
     }
 
-    const_cast<WaveFile*>(this)->updateLoop(); // dude this is like, so awesome
+    if (!mReferences.isEmpty())
+    {
+        const_cast<WaveFile*>(this)->updateLoop(); // dude this is like, so awesome
+    }
 
     if (getLoopEndFrame(false) <= getLoopStartFrame(false))
     {
@@ -575,6 +578,8 @@ bool WaveFile::doRead(const void* fileAddr)
     //! Causes crash and it tries to access buffer past end (its smaller than an expected stream buffer)
     // updateLoopInfo_(false, true);
 
+    mIsLoopDirty = false;
+
     return true;
 }
 
@@ -875,6 +880,8 @@ bool WaveFile::readWavFile(const RiffWaveInfo& info, Encoding encoding)
     stream.rewind();
     stream.skip(info.dataStart);
 
+    mIsLoopDirty = true;
+
     {
         snd::internal::driver::SoundThreadLock lock;
 
@@ -950,8 +957,6 @@ bool WaveFile::readWavFile(const RiffWaveInfo& info, Encoding encoding)
     mLoopStartFrame = info.loopStartFrame;
     mLoopEndFrame = info.loopEndFrame;
 
-    mIsLoopDirty = false;
-
     for (u32 i = 0; i < info.numChannels; i++)
     {
         Channel* channel = mChannels.birthBack();
@@ -977,6 +982,8 @@ bool WaveFile::readWavFile(const RiffWaveInfo& info, Encoding encoding)
 
         channel->mDataSize = dataSize;
     }
+
+    mIsLoopDirty = false;
 
     return true;
 }

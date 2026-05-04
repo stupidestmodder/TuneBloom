@@ -535,6 +535,8 @@ bool ReadStreamWaves(Sound* sound, const void* strmFile)
             wave->updateLoopInfo_(true, false); //? Update as the ones in the BFSTM can differ
         }
 
+        wave->mIsLoopDirty = false;
+
         sBfsar.getWaveFileList().pushBack(wave);
 
         track.getWaveFileRef().attach(wave);

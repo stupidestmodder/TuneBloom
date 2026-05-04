@@ -113,15 +113,15 @@ public:
         const BankFile::VelocityRegion* velocityRegion = keyRegion->getVelocityRegion(noteOnInfo.velocity);
         SEAD_ASSERT(velocityRegion);
 
-        const Item* waveFile = velocityRegion->getWaveFileRef().getItem();
-        if (!waveFile)
+        const WaveFile* waveFile = static_cast<const WaveFile*>(velocityRegion->getWaveFileRef().getItem());
+        if (!waveFile || waveFile->getIsLoopDirty() || waveFile->getChannels().isEmpty())
         {
             return nullptr;
         }
 
         // Gets the details of the waveform and allocates a channel.
         nw::snd::internal::WaveInfo waveInfo;
-        nw::snd::internal::GetWaveInfoFromWaveFile(&waveInfo, *static_cast<const WaveFile*>(waveFile));
+        nw::snd::internal::GetWaveInfoFromWaveFile(&waveInfo, *waveFile);
 
         snd::internal::driver::Channel* pChannel = snd::internal::driver::Channel::allocChannel(
             sead::Mathi::min(static_cast<s32>(waveInfo.channelCount), 2),

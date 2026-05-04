@@ -181,6 +181,14 @@ bool SoundPlayer::playStrmSound(const Sound* sound)
 
         const WaveFile& waveFile = *static_cast<const WaveFile*>(trackInfo.getWaveFileRef().getItem());
 
+        if (waveFile.getChannels().isEmpty())
+        {
+            PopupMgr::instance()->addPopup({ sead::FormatFixedSafeString<64>("Track %u Wave File has no channels", i).cstr(), nullptr });
+            return false;
+        }
+
+        const_cast<WaveFile&>(waveFile).updateLoop();
+
         if (i == 0)
         {
             mainWave = &waveFile;
@@ -380,6 +388,8 @@ bool SoundPlayer::playWaveFile(const WaveFile& wave, s32 channel, const Sound* s
         return false;
     }
 
+    const_cast<WaveFile&>(wave).updateLoop();
+
     {
         snd::internal::driver::SoundThreadLock lock;
         stopAllPlayersWithoutLock(false);
@@ -421,22 +431,26 @@ bool SoundPlayer::playBankNote(u8 key, u8 velocity, const BankFile::VelocityRegi
         return false;
     }
 
-    snd::internal::driver::SoundThreadLock lock;
-    stopAllPlayersWithoutLock(false);
+    const_cast<WaveFile*>(waveFile)->updateLoop();
 
-    mWavePlayer.init();
-    mCurrentPlayer = &mWavePlayer;
+    {
+        snd::internal::driver::SoundThreadLock lock;
+        stopAllPlayersWithoutLock(false);
 
-    mWavePlayer.prepare(*waveFile);
-    initPlayerParam_();
+        mWavePlayer.init();
+        mCurrentPlayer = &mWavePlayer;
 
-    mWavePlayer.setBankNoteInfo(key, velocity, velocityRegion);
+        mWavePlayer.prepare(*waveFile);
+        initPlayerParam_();
 
-    mSampleCount = mWavePlayer.getSampleCount();
-    mSampleRate = mWavePlayer.getSampleRate();
+        mWavePlayer.setBankNoteInfo(key, velocity, velocityRegion);
 
-    mPlayingSound = nullptr;
-    mPlayingWaveFile = waveFile;
+        mSampleCount = mWavePlayer.getSampleCount();
+        mSampleRate = mWavePlayer.getSampleRate();
+
+        mPlayingSound = nullptr;
+        mPlayingWaveFile = waveFile;
+    }
 
     return true;
 }

@@ -219,7 +219,7 @@ public:
         , mDataEndian(sead::Endian::eBig)
         , mEncoding(Encoding::DspAdpcm)
         , mIsLoop(false)
-        , mIsLoopDirty(false)
+        , mIsLoopDirty(true)
         , mSampleRate(0)
         , mLoopStartFrame(0)
         , mLoopEndFrame(0)
