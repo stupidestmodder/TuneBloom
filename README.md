@@ -42,6 +42,8 @@ TuneBloom is an extremely fast & stable editor for editing NintendoWare audio fo
   - The `REGN` blocks on `BFSTM` files are yet not supported.
 - Stream prefetch (`BFSTP`)
   - Prefetch files are yet not supported.
+- ADTS Streams (`AAC`)
+  - Only `BFSTM` Streams are supported.
 
 > [!TIP]
 > While TuneBloom has reached a stable release, it is still advised to make frequent backups before saving.
