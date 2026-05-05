@@ -232,7 +232,8 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
         ImGui::BeginChild(sead::FormatFixedSafeString<64>("%sInnerWindow", listName).cstr(), ImVec2(0.0f, 0.0f), flags);
     }
 
-    const bool canEdit = filterCallback == nullptr;
+    // const bool canEdit = filterCallback == nullptr;
+    const bool canEdit = true;
 
     bool reorder = false;
     Item* item1 = nullptr;
