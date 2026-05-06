@@ -125,8 +125,8 @@ bool Bfsar::save()
     if (!validate_())
         return false;
 
-    sead::FormatFixedSafeString<512> path("%s.save.bfsar", mFilePath->cstr()); // TODO: Remove
-    // sead::SafeString path = *mFilePath;
+    // sead::FormatFixedSafeString<512> path("%s.save.bfsar", mFilePath->cstr()); //? Debug
+    sead::SafeString path = *mFilePath;
 
     sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");
     SEAD_ASSERT(device);
@@ -4901,8 +4901,8 @@ void Bfsar::save_(sead::FileHandle& handle)
             bool b = sead::Path::getDirectoryName(&dir, getFilePath());
             SEAD_ASSERT(b);
 
-            sead::FormatFixedSafeString<512> savePath("%s/%s.save.bfstm", dir.cstr(), path); // TODO: Remove
-            // sead::FormatFixedSafeString<512> savePath("%s/%s", dir.cstr(), path);
+            // sead::FormatFixedSafeString<512> savePath("%s/%s.save.bfstm", dir.cstr(), path); //? Debug
+            sead::FormatFixedSafeString<512> savePath("%s/%s", dir.cstr(), path);
             //SEAD_PRINT("%s\n", savePath.cstr());
 
             b = sead::Path::getDirectoryName(&dir, savePath);
