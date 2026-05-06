@@ -1511,6 +1511,7 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
         mBankList.pushBack(bank);
     }
 
+    std::unordered_map<std::string, const Sound*> streamSounds; //? Keep track of which .bfstm files we already loaded
     for (u32 i = 0; i < soundArchive.GetSoundCount(); i++)
     {
         const nw::snd::internal::SoundArchiveFile::SoundInfo* soundInfo = soundArchive.GetSoundInfo(soundArchive.GetSoundIdFromIndex(i));
@@ -1637,7 +1638,8 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             SEAD_ASSERT(extFileInfo);
 
             sound->mStreamSoundInfo.mPath = extFileInfo->filePath;
-            if (sound->mStreamSoundInfo.mPath.isEmpty())
+            bool validPath = !sound->mStreamSoundInfo.mPath.isEmpty();
+            if (!validPath)
             {
                 PopupMgr::instance()->pushCurrentItemError("Path is empty");
             }
@@ -1645,99 +1647,104 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             //sound->mStreamSoundInfo.mAllocateTrackFlags = strmSoundInfo.allocateTrackFlags;
             //sound->mStreamSoundInfo.mAllocateChannelCount = strmSoundInfo.allocateChannelCount;
 
-            sead::FixedSafeString<512> dir;
-            bool b = sead::Path::getDirectoryName(&dir, getFilePath());
-            SEAD_ASSERT(b);
-
-            const char* filePath = sound->mStreamSoundInfo.mPath.cstr();
-
-            sead::FixedSafeString<512> path;
-            path.format("%s/%s", dir.cstr(), filePath);
-            //SEAD_PRINT("%s\n", path.cstr());
-
-            sead::FileDevice::LoadArg loadArg;
-            loadArg.path = path;
-
-            bool validStrmFile = false;
-
             sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");
             SEAD_ASSERT(device);
 
-            u8* strmFile = device->tryLoad(loadArg);
+            u8* strmFile = nullptr;
+            bool validStrmFile = false;
+            if (validPath)
+            {
+                sead::FixedSafeString<512> dir;
+                if (sead::Path::getDirectoryName(&dir, getFilePath()))
+                {
+                    const char* filePath = sound->mStreamSoundInfo.mPath.cstr();
+
+                    sead::FixedSafeString<512> path;
+                    path.format("%s/%s", dir.cstr(), filePath);
+                    //SEAD_PRINT("%s\n", path.cstr());
+
+                    sead::FileDevice::LoadArg loadArg;
+                    loadArg.path = path;
+
+                    strmFile = device->tryLoad(loadArg);
+                    if (!strmFile)
+                    {
+                        sead::FormatFixedSafeString<1024> msg("Couldn't load '%s'\nThis should be relative to your .bfsar file", filePath);
+                        PopupMgr::instance()->pushCurrentItemError(msg);
+                    }
+                }
+                else
+                {
+                    sead::FormatFixedSafeString<1024> msg("Could not parse path directory\n'%s'", getFilePath().cstr());
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                }
+            }
+
             if (strmFile)
             {
-                // if (sead::MemUtil::compare(strmFile, "CSTM", 4) == 0)
-                if (sead::MemUtil::compare(strmFile, "FSTM", 4) == 0)
+                nw::snd::internal::StreamSoundFileReader reader;
+                reader.Initialize(strmFile);
+
+                if (reader.IsAvailable())
                 {
-                    nw::snd::internal::StreamSoundFileReader reader;
-                    reader.Initialize(strmFile);
+                    validStrmFile = true;
 
-                    if (reader.IsAvailable())
+                    // TODO: Regions
+                    if (reader.GetRegionDataOffset() != 0)
                     {
-                        validStrmFile = true;
+                        PopupMgr::instance()->pushCurrentItemError("Stream region (REGN) block is not supported");
+                    }
 
-                        // TODO: Regions
-                        if (reader.GetRegionDataOffset() != 0)
+                    // If track information is embedded in bXstm (up to binary version 0.2.0.0)
+                    if (reader.IsTrackInfoAvailable())
+                    {
+                        u32 trackCount = reader.GetTrackCount();
+                        if (trackCount > cStrmTrackNum)
                         {
-                            PopupMgr::instance()->pushCurrentItemError("Stream region (REGN) block is not supported");
+                            trackCount = cStrmTrackNum;
                         }
 
-                        // If track information is embedded in bXstm (up to binary version 0.2.0.0)
-                        if (reader.IsTrackInfoAvailable())
+                        // Read track information.
+                        for (u32 j = 0; j < trackCount; j++)
                         {
-                            u32 trackCount = reader.GetTrackCount();
-                            if (trackCount > cStrmTrackNum)
+                            Sound::StreamSoundInfo::Track* track = new(heap) Sound::StreamSoundInfo::Track();
+                            track->mId = j;
+
+                            track->mEnableName = true;
+                            track->mName = "Track";
+
+                            nw::snd::internal::StreamSoundFileReader::TrackInfo trackInfo;
+                            if (reader.ReadStreamTrackInfo(&trackInfo, j))
                             {
-                                trackCount = cStrmTrackNum;
+                                track->mVolume = trackInfo.volume;
+                                track->mPan = trackInfo.pan;
+                                track->mSPan = trackInfo.span;
+                                track->mFlags = trackInfo.flags;
+
+                                u8 channelCount = trackInfo.channelCount;
+                                SEAD_ASSERT(channelCount <= nw::snd::WAVE_CHANNEL_MAX);
+
+                                for (u8 k = 0; k < channelCount; k++)
+                                {
+                                    u8& channel = *track->mChannels.birthBack();
+                                    channel = trackInfo.globalChannelIndex[k];
+                                }
+                            }
+                            else
+                            {
+                                sead::FormatFixedSafeString<32> msg("Track %u read error", j);
+                                PopupMgr::instance()->pushCurrentItemError(msg);
                             }
 
-                            // Read track information.
-                            for (u32 j = 0; j < trackCount; j++)
-                            {
-                                Sound::StreamSoundInfo::Track* track = new(heap) Sound::StreamSoundInfo::Track();
-                                track->mId = j;
-
-                                track->mEnableName = true;
-                                track->mName = "Track";
-
-                                nw::snd::internal::StreamSoundFileReader::TrackInfo trackInfo;
-                                if (reader.ReadStreamTrackInfo(&trackInfo, j))
-                                {
-                                    track->mVolume = trackInfo.volume;
-                                    track->mPan = trackInfo.pan;
-                                    track->mSPan = trackInfo.span;
-                                    track->mFlags = trackInfo.flags;
-
-                                    u8 channelCount = trackInfo.channelCount;
-                                    SEAD_ASSERT(channelCount <= nw::snd::WAVE_CHANNEL_MAX);
-
-                                    for (u8 k = 0; k < channelCount; k++)
-                                    {
-                                        u8& channel = *track->mChannels.birthBack();
-                                        channel = trackInfo.globalChannelIndex[k];
-                                    }
-                                }
-                                else
-                                {
-                                    sead::FormatFixedSafeString<32> msg("Track %u read error", j);
-                                    PopupMgr::instance()->pushCurrentItemError(msg);
-                                }
-
-                                sound->mStreamSoundInfo.mTrackList.pushBack(track);
-                            }
+                            sound->mStreamSoundInfo.mTrackList.pushBack(track);
                         }
                     }
                 }
                 else
                 {
-                    sead::FormatFixedSafeString<1024> msg("The file '%s' is not a valid BFSTM file", path.cstr());
+                    sead::FormatFixedSafeString<1024> msg("Error processing the file '%s'", sound->mStreamSoundInfo.mPath.cstr());
                     PopupMgr::instance()->pushCurrentItemError(msg);
                 }
-            }
-            else
-            {
-                sead::FormatFixedSafeString<1024> msg("Couldn't load '%s'", filePath);
-                PopupMgr::instance()->pushCurrentItemError(msg);
             }
 
             if (isStreamTrackInfoAvailable())
@@ -1840,10 +1847,16 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
 
             if (validStrmFile)
             {
-                extern bool ReadStreamWaves(Sound* sound, const void* strmFile);
+                extern bool ReadStreamWaves(Sound* sound, const void* strmFile, const Sound* srcSound);
 
-                // TODO: Only load the same bfstm file once ?
-                ReadStreamWaves(sound, strmFile);
+                const Sound* srcStream = nullptr;
+                auto it = streamSounds.find(sound->mStreamSoundInfo.mPath.cstr());
+                if (it != streamSounds.end())
+                {
+                    srcStream = it->second;
+                }
+
+                ReadStreamWaves(sound, strmFile, srcStream);
             }
 
             if (strmFile)
@@ -1854,6 +1867,11 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             if (sound->mStreamSoundInfo.mTrackList.isEmpty())
             {
                 PopupMgr::instance()->pushCurrentItemError("Couldn't find any Track information");
+            }
+
+            if (validPath)
+            {
+                streamSounds.insert({ sound->mStreamSoundInfo.mPath.cstr(), sound });
             }
         }
         else if (sound->mSoundType == Sound::SoundType::Wave)

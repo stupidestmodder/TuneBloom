@@ -223,7 +223,7 @@ public:
         friend class Bfsar;
         friend class WaveFile;
 
-        friend bool ReadStreamWaves(Sound* sound, const void* strmFile);
+        friend bool ReadStreamWaves(Sound* sound, const void* strmFile, const Sound* srcSound);
     };
 
     struct RiffWaveInfo
@@ -502,5 +502,5 @@ private:
     friend class Bfsar;
     friend class BfwarFile;
 
-    friend bool ReadStreamWaves(Sound* sound, const void* strmFile);
+    friend bool ReadStreamWaves(Sound* sound, const void* strmFile, const Sound* srcSound);
 };

@@ -434,13 +434,37 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
     return true;
 }
 
-bool ReadStreamWaves(Sound* sound, const void* strmFile)
+bool ReadStreamWaves(Sound* sound, const void* strmFile, const Sound* srcSound)
 {
     Sound::StreamSoundInfo::Track::List& tracks = sound->getStreamSoundInfo().getTrackList();
 
     if (tracks.isEmpty())
     {
         return false;
+    }
+
+    if (srcSound)
+    {
+        const Sound::StreamSoundInfo::Track::List& srcTracks = srcSound->getStreamSoundInfo().getTrackList();
+        if (tracks.size() != srcTracks.size())
+        {
+            sead::FormatFixedSafeString<1024> msg(
+                "Stream Sound '%s' and '%s' should both have the same amount of Tracks (%d != %d)",
+                srcSound->getFormattedName().cstr(), sound->getFormattedName().cstr(), srcTracks.size(), tracks.size()
+            );
+            PopupMgr::instance()->pushCurrentItemError(msg);
+            return false;
+        }
+
+        for (u32 trackNo = 0; trackNo < tracks.size(); trackNo++)
+        {
+            Sound::StreamSoundInfo::Track& track = *static_cast<Sound::StreamSoundInfo::Track*>(tracks.nth(trackNo)->val());
+            const Sound::StreamSoundInfo::Track& srcTrack = *static_cast<const Sound::StreamSoundInfo::Track*>(srcTracks.nth(trackNo)->val());
+
+            track.getWaveFileRef().attach(const_cast<Item*>(srcTrack.getWaveFileRef().getItem()));
+        }
+
+        return true;
     }
 
     nw::snd::internal::StreamSoundFileReader reader;
