@@ -1190,21 +1190,41 @@ bool WaveFile::writeWavFile(const sead::SafeString& path, s32 channelIdx)
     return true;
 }
 
-void WaveFile::buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel::SeekData* outSeekData)
+void WaveFile::buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel::SeekData* outSeekData, const Channel::SeekData* srcSeekData, u32 preserveSamples)
 {
-    const u32 cDefaultSamplesPerBlock = 0x3800;
-    const u32 cSamplesPerBlock = cDefaultSamplesPerBlock;
+    const u32 cSamplesPerBlock = 0x3800;
 
     SEAD_ASSERT(outSeekData);
+
+    bool freeSeek = false;
+    if (outSeekData == srcSeekData)
+    {
+        Channel::SeekData* seekData = new Channel::SeekData();
+        seekData->copy(*srcSeekData);
+
+        srcSeekData = seekData;
+        freeSeek = true;
+    }
+
     outSeekData->free();
 
-    u32 blockNum = ceil(sampleCount / (f32)cSamplesPerBlock);
+    u32 blockNum = (u32)ceil(sampleCount / (f32)cSamplesPerBlock);
     outSeekData->mSeekInfo.allocBuffer(blockNum);
     outSeekData->mOwner = true;
+
+    u32 blocksToPreserve = preserveSamples / cSamplesPerBlock;
 
     for (u32 blockNo = 0; blockNo < blockNum; blockNo++)
     {
         Channel::SeekInfo& seekInfo = outSeekData->mSeekInfo[blockNo];
+
+        //? Copy seek entry directly from source if it falls within the preserved region
+        if (srcSeekData != nullptr && blockNo < blocksToPreserve)
+        {
+            seekInfo = srcSeekData->getSeekInfo(blockNo);
+            continue;
+        }
+
         if (blockNo == 0) //? First block is always 0
         {
             seekInfo.yn1 = 0;
@@ -1226,6 +1246,11 @@ void WaveFile::buildSeekTable_(const void* samples, u32 sampleCount, snd::Sample
             seekInfo.yn1 = samples16[blockNo * cSamplesPerBlock - 1];
             seekInfo.yn2 = samples16[blockNo * cSamplesPerBlock - 2];
         }
+    }
+
+    if (freeSeek)
+    {
+        delete srcSeekData;
     }
 }
 
@@ -1402,6 +1427,11 @@ void* WaveFile::convertChannel_(
 
             channel.setFullData_(fullData, from, dataEndian);
         }
+
+        if (updateChannel && shouldPreserveFullData && !channel.getFullSeekData_())
+        {
+            channel.setFullSeekData_(channel.mSeekData);
+        }
     }
 
     //? Spool PCM data
@@ -1467,11 +1497,6 @@ void* WaveFile::convertChannel_(
         }
         else if (to == Encoding::DspAdpcm)
         {
-            if (outSeekData)
-            {
-                WaveFile::buildSeekTable_(spooledPcm, totalSamples, snd::SampleFormat::PcmS16, outSeekData);
-            }
-
             u32 bufferSize = getBytesForAdpcmBuffer(totalSamples);
             u8* dst = new u8[bufferSize];
 
@@ -1539,6 +1564,17 @@ void* WaveFile::convertChannel_(
                 {
                     FillAdpcmParam(outAdpcmParamStream, outAdpcmLoopParamStream, adpcmInfoStream);
                 }
+
+                if (outSeekData)
+                {
+                    const Channel::SeekData* srcSeekData = channel.getFullSeekData_();
+                    if (!srcSeekData)
+                    {
+                        srcSeekData = &channel.getSeekData();
+                    }
+
+                    WaveFile::buildSeekTable_(spooledPcm, totalSamples, snd::SampleFormat::PcmS16, outSeekData, srcSeekData, copiedSamples);
+                }
             }
             else
             {
@@ -1558,6 +1594,11 @@ void* WaveFile::convertChannel_(
                 {
                     FillAdpcmParam(outAdpcmParamStream, outAdpcmLoopParamStream, adpcmInfoStream);
                 }
+
+                if (outSeekData)
+                {
+                    WaveFile::buildSeekTable_(spooledPcm, totalSamples, snd::SampleFormat::PcmS16, outSeekData);
+                }
             }
 
             dstData = dst;
@@ -1572,6 +1613,11 @@ void* WaveFile::convertChannel_(
         if (updateChannel && !shouldPreserveFullData && channel.getFullData_())
         {
             channel.freeFullData_();
+        }
+
+        if (updateChannel && !shouldPreserveFullData && channel.getFullSeekData_())
+        {
+            channel.freeFullSeekData_();
         }
     }
 

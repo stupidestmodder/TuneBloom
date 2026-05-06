@@ -66,6 +66,23 @@ public:
                 sead::MemUtil::fillZero(&mSeekInfo, sizeof(sead::Buffer<SeekInfo>)); // egregious
             }
 
+            void copy(const SeekData& src)
+            {
+                free();
+
+                s32 blocks = src.getSeekInfoBlocks();
+                if (blocks > 0)
+                {
+                    mSeekInfo.allocBuffer(blocks);
+                    mOwner = true;
+
+                    for (s32 i = 0; i < blocks; i++)
+                    {
+                        mSeekInfo[i] = src.mSeekInfo[i];
+                    }
+                }
+            }
+
             const SeekInfo& getSeekInfo(u32 blockNo) const
             {
                 if (static_cast<s32>(blockNo) < getSeekInfoBlocks())
@@ -166,6 +183,21 @@ public:
             mFullData = nullptr;
         }
 
+        const SeekData* getFullSeekData_() const
+        {
+            return mFullSeekData.getSeekInfoBlocks() > 0 ? &mFullSeekData : nullptr;
+        }
+
+        void setFullSeekData_(const SeekData& src)
+        {
+            mFullSeekData.copy(src);
+        }
+
+        void freeFullSeekData_()
+        {
+            mFullSeekData.free();
+        }
+
     private:
         void dispose_();
 
@@ -186,6 +218,7 @@ public:
         snd::internal::DspAdpcmLoopParam mAdpcmLoopParamStream;
 
         SeekData mSeekData;
+        SeekData mFullSeekData; // Preserved seek table for when mLoopEndFrame < mSampleCount
 
         friend class Bfsar;
         friend class WaveFile;
@@ -419,7 +452,7 @@ public:
 
     void updateLoop();
 
-    static void buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel::SeekData* outSeekData);
+    static void buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel::SeekData* outSeekData, const Channel::SeekData* srcSeekData = nullptr, u32 preserveSamples = 0);
 
     static void* convertChannel_(
         Channel& channel, const void* data, sead::Endian::Types dataEndian,
