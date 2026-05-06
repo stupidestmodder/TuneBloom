@@ -543,7 +543,7 @@ void DrawAllItemsUI(const char* listName, Item::List& list, CreateItemCallback c
 
         if (ImGui::BeginPopupModal(ICON_LC_ALERT_TRIANGLE " Warning###References", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
         {
-            ImGui::Text("The item '%s' is referenced by other items\nDelete anyway ?", sDeleteItem->getFormattedName().cstr());
+            ImGui::Text("The Item '%s' is referenced by other Items\nDelete anyway ?", sDeleteItem->getFormattedName().cstr());
             ImGui::Separator();
 
             ImVec2 buttonSize((ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x * 2.0f) / 2.0f, 0.0f);

@@ -145,7 +145,7 @@ void PopupMgr::updateErrors_()
     ImVec2 center = ImGui::GetMainViewport()->GetCenter();
     ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 
-    if (ImGui::BeginPopupModal(sead::FormatFixedSafeString<64>(ICON_LC_ALERT_TRIANGLE " Errors with file%s", sPopupName).cstr()))
+    if (ImGui::BeginPopupModal(sead::FormatFixedSafeString<64>(ICON_LC_ALERT_TRIANGLE " Errors while opening%s", sPopupName).cstr()))
     {
         ImVec2 buttonSize((ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x * 1.0f) / 1.0f, 25.0f);
         f32 sizeSlack = -buttonSize.y - ImGui::GetStyle().WindowPadding.y / 1.0f;
@@ -176,7 +176,11 @@ void PopupMgr::updateErrors_()
             }
         }
 
-        ImGui::Text("The following items contains errors that must be fixed before saving");
+        ImGui::Text("The following Items contain errors that must be fixed before saving");
+
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+        ImGui::Text("PROCEED ONLY IF YOU KNOW WHAT YOU ARE DOING (AND IF YOU DO MAKE A BACKUP)");
+        ImGui::PopStyleColor();
 
         // Left
         {
