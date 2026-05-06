@@ -35,8 +35,6 @@ WaveFile::Channel::~Channel()
         delete[] static_cast<const u8*>(mFullData);
         mFullData = nullptr;
     }
-
-    freeSeekInfo_();
 }
 
 void WaveFile::Channel::dispose_()
@@ -44,16 +42,6 @@ void WaveFile::Channel::dispose_()
     snd::internal::driver::SoundThreadLock lock;
 
     snd::internal::driver::DisposeCallbackMgr::instance()->dispose(mData, mDataSize);
-}
-
-void WaveFile::Channel::freeSeekInfo_()
-{
-    if (mSeekInfo)
-    {
-        delete[] mSeekInfo;
-        mSeekInfo = nullptr;
-        mSeekInfoBlocks = 0;
-    }
 }
 
 WaveFile::~WaveFile()
@@ -460,7 +448,7 @@ void WaveFile::drawUI()
             {
                 Channel* channel = mChannels.nth(i);
 
-                channel->freeSeekInfo_();
+                channel->mSeekData.free();
 
                 u32 dataSize = 0;
                 void* newData = convertChannel_(
@@ -472,7 +460,8 @@ void WaveFile::drawUI()
                     getLoopStartFrame(false), getLoopEndFrame(false),
                     getLoopStartFrame(true), getLoopEndFrame(true),
                     &channel->mAdpcmParam, &channel->mAdpcmLoopParam,
-                    &channel->mAdpcmParamStream, &channel->mAdpcmLoopParamStream
+                    &channel->mAdpcmParamStream, &channel->mAdpcmLoopParamStream,
+                    &channel->mSeekData
                 );
 
                 if (channel->mOwnsData && channel->mData && channel->mData != newData)
@@ -980,7 +969,8 @@ bool WaveFile::readWavFile(const RiffWaveInfo& info, Encoding encoding)
             getLoopStartFrame(false), getLoopEndFrame(false),
             getLoopStartFrame(true), getLoopEndFrame(true),
             &channel->mAdpcmParam, &channel->mAdpcmLoopParam,
-            &channel->mAdpcmParamStream, &channel->mAdpcmLoopParamStream
+            &channel->mAdpcmParamStream, &channel->mAdpcmLoopParamStream,
+            &channel->mSeekData
         );
 
         if (channel->mData != channels[i])
@@ -1181,20 +1171,21 @@ bool WaveFile::writeWavFile(const sead::SafeString& path, s32 channelIdx)
     return true;
 }
 
-void WaveFile::buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel& channel)
+void WaveFile::buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel::SeekData* outSeekData)
 {
     const u32 cDefaultSamplesPerBlock = 0x3800;
     const u32 cSamplesPerBlock = cDefaultSamplesPerBlock;
 
-    channel.freeSeekInfo_();
+    SEAD_ASSERT(outSeekData);
+    outSeekData->free();
 
     u32 blockNum = ceil(sampleCount / (f32)cSamplesPerBlock);
-    channel.mSeekInfo = new Channel::SeekInfo[blockNum];
-    channel.mSeekInfoBlocks = blockNum;
+    outSeekData->mSeekInfo.allocBuffer(blockNum);
+    outSeekData->mOwner = true;
 
     for (u32 blockNo = 0; blockNo < blockNum; blockNo++)
     {
-        Channel::SeekInfo& seekInfo = channel.mSeekInfo[blockNo];
+        Channel::SeekInfo& seekInfo = outSeekData->mSeekInfo[blockNo];
         if (blockNo == 0) //? First block is always 0
         {
             seekInfo.yn1 = 0;
@@ -1294,7 +1285,8 @@ void WaveFile::rebuildSpooledData_()
             getLoopStartFrame(false), getLoopEndFrame(false),
             getLoopStartFrame(true), getLoopEndFrame(true),
             &channel->mAdpcmParam, &channel->mAdpcmLoopParam,
-            &channel->mAdpcmParamStream, &channel->mAdpcmLoopParamStream
+            &channel->mAdpcmParamStream, &channel->mAdpcmLoopParamStream,
+            &channel->mSeekData
         );
 
         if (channel->mOwnsData && channel->mData && channel->mData != newData)
@@ -1318,7 +1310,8 @@ void* WaveFile::convertChannel_(
     u32 sampleCount, u32 targetSampleCount, u32 originalLoopStartFrame, u32 originalLoopEndFrame,
     u32 loopStartFrame, u32 loopEndFrame, u32 loopStartFrameStream, u32 loopEndFrameStream,
     snd::DspAdpcmParam* outAdpcmParam, snd::internal::DspAdpcmLoopParam* outAdpcmLoopParam,
-    snd::DspAdpcmParam* outAdpcmParamStream, snd::internal::DspAdpcmLoopParam* outAdpcmLoopParamStream)
+    snd::DspAdpcmParam* outAdpcmParamStream, snd::internal::DspAdpcmLoopParam* outAdpcmLoopParamStream,
+    Channel::SeekData* outSeekData)
 {
     if (from != Encoding::Pcm8 && from != Encoding::Pcm16 && from != Encoding::DspAdpcm)
     {
@@ -1455,9 +1448,9 @@ void* WaveFile::convertChannel_(
         }
         else if (to == Encoding::DspAdpcm)
         {
-            if (updateChannel)
+            if (outSeekData)
             {
-                WaveFile::buildSeekTable_(spooledPcm, totalSamples, snd::SampleFormat::PcmS16, channel);
+                WaveFile::buildSeekTable_(spooledPcm, totalSamples, snd::SampleFormat::PcmS16, outSeekData);
             }
 
             u32 bufferSize = getBytesForAdpcmBuffer(totalSamples);

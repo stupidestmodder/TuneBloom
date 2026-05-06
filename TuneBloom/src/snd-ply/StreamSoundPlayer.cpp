@@ -411,7 +411,7 @@ void StreamSoundPlayer::prepare(const Sound::StreamSoundInfo& streamSoundInfo, s
     };
 
     {
-        u32 bufferSize = nw::snd::internal::Util::GetByteBySample(waveInfo.loopEndFrame, waveInfo.sampleFormat);
+        u32 mainWaveSize = channels[0]->getDataSize();
 
         u8* channelBuffers[cStrmChannelNum] = { nullptr };
         for (u32 i = 0; i < waveInfo.channelCount; i++)
@@ -423,12 +423,12 @@ void StreamSoundPlayer::prepare(const Sound::StreamSoundInfo& streamSoundInfo, s
                 currentWave.getLoopStartFrame(true) == waveInfo.loopStartFrame &&
                 currentWave.getLoopEndFrame(true) == waveInfo.loopEndFrame)
             {
-                channelBuffers[i] = new u8[bufferSize];
+                channelBuffers[i] = new u8[mainWaveSize];
 
                 const void* src = channel.getData();
                 u8* dst = channelBuffers[i];
 
-                sead::MemUtil::copy(dst, src, bufferSize);
+                sead::MemUtil::copy(dst, src, mainWaveSize);
 
                 const snd::DspAdpcmParam& adpcmParam = channel.getAdpcmParam(true);
                 const snd::internal::DspAdpcmLoopParam& adpcmLoopParam = channel.getAdpcmLoopParam(true);
@@ -446,7 +446,8 @@ void StreamSoundPlayer::prepare(const Sound::StreamSoundInfo& streamSoundInfo, s
                     0, 0,
                     waveInfo.loopStartFrame, waveInfo.loopEndFrame,
                     nullptr, nullptr,
-                    &adpcmParam, &adpcmLoopParam
+                    &adpcmParam, &adpcmLoopParam,
+                    nullptr
                 );
 
                 updateWaveInfo(mWaveInfos[i], channelBuffers[i], sead::Endian::getHostEndian(), adpcmParam, adpcmLoopParam);

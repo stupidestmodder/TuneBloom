@@ -5,6 +5,7 @@
 
 #include <snd/Global.h>
 
+#include <container/seadBuffer.h>
 #include <container/seadObjList.h>
 
 #include <dsp/dsp.h>
@@ -42,6 +43,47 @@ public:
             s16 yn2;
         };
 
+        class SeekData
+        {
+        public:
+            SeekData()
+                : mSeekInfo(), mOwner(false)
+            {
+            }
+
+            ~SeekData()
+            {
+                free();
+            }
+
+            void free()
+            {
+                if (mOwner)
+                {
+                    mSeekInfo.freeBuffer();
+                }
+
+                sead::MemUtil::fillZero(&mSeekInfo, sizeof(sead::Buffer<SeekInfo>)); // egregious
+            }
+
+            const SeekInfo& getSeekInfo(u32 blockNo) const
+            {
+                if (static_cast<s32>(blockNo) < getSeekInfoBlocks())
+                    return mSeekInfo[static_cast<s32>(blockNo)];
+
+                static const SeekInfo cNullSeekInfo;
+                return cNullSeekInfo;
+            }
+
+            s32 getSeekInfoBlocks() const
+            {
+                return mSeekInfo.size();
+            }
+
+            sead::Buffer<SeekInfo> mSeekInfo;
+            bool mOwner;
+        };
+
     public:
         Channel()
             : mOwnsData(false)
@@ -51,8 +93,7 @@ public:
             , mFullData(nullptr)
             , mFullDataEncoding(Encoding::Pcm16)             // Arbitrary
             , mFullDataEndian(sead::Endian::getHostEndian()) // ^
-            , mSeekInfo(nullptr)
-            , mSeekInfoBlocks(0)
+            , mSeekData()
         {
             sead::MemUtil::fillZero(&mAdpcmParam, sizeof(mAdpcmParam));
             sead::MemUtil::fillZero(&mAdpcmLoopParam, sizeof(mAdpcmLoopParam));
@@ -82,18 +123,19 @@ public:
             return forStream ? mAdpcmLoopParamStream : mAdpcmLoopParam;
         }
 
-        const SeekInfo& getSeekInfo(u32 blockNo) const
+        const SeekData& getSeekData() const
         {
-            if (blockNo < mSeekInfoBlocks)
-                return mSeekInfo[blockNo];
-
-            static const SeekInfo cNullSeekInfo;
-            return cNullSeekInfo;
+            return mSeekData;
         }
 
-        u32 getSeekInfoBlocks() const
+        const SeekInfo& getSeekInfo(u32 blockNo) const
         {
-            return mSeekInfoBlocks;
+            return mSeekData.getSeekInfo(blockNo);
+        }
+
+        s32 getSeekInfoBlocks() const
+        {
+            return mSeekData.getSeekInfoBlocks();
         }
 
         const void* getFullData_() const
@@ -126,7 +168,6 @@ public:
 
     private:
         void dispose_();
-        void freeSeekInfo_();
 
     private:
         bool mOwnsData;
@@ -144,8 +185,7 @@ public:
         snd::DspAdpcmParam mAdpcmParamStream;
         snd::internal::DspAdpcmLoopParam mAdpcmLoopParamStream;
 
-        SeekInfo* mSeekInfo;
-        u32 mSeekInfoBlocks;
+        SeekData mSeekData;
 
         friend class Bfsar;
         friend class WaveFile;
@@ -379,7 +419,7 @@ public:
 
     void updateLoop();
 
-    static void buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel& channel);
+    static void buildSeekTable_(const void* samples, u32 sampleCount, snd::SampleFormat sampleFormat, Channel::SeekData* outSeekData);
 
     static void* convertChannel_(
         Channel& channel, const void* data, sead::Endian::Types dataEndian,
@@ -387,7 +427,8 @@ public:
         u32 sampleCount, u32 targetSampleCount, u32 originalLoopStartFrame, u32 originalLoopEndFrame,
         u32 loopStartFrame, u32 loopEndFrame, u32 loopStartFrameStream, u32 loopEndFrameStream,
         snd::DspAdpcmParam* outAdpcmParam, snd::internal::DspAdpcmLoopParam* outAdpcmLoopParam,
-        snd::DspAdpcmParam* outAdpcmParamStream, snd::internal::DspAdpcmLoopParam* outAdpcmLoopParamStream
+        snd::DspAdpcmParam* outAdpcmParamStream, snd::internal::DspAdpcmLoopParam* outAdpcmLoopParamStream,
+        Channel::SeekData* outSeekData
     );
 
 private:

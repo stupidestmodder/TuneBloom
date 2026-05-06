@@ -516,9 +516,10 @@ bool ReadStreamWaves(Sound* sound, const void* strmFile)
                 channel->mAdpcmLoopParam.loopYn2 = adpcmLoopParam.loopYn2;
                 sead::MemUtil::copy(&channel->mAdpcmLoopParamStream, &channel->mAdpcmLoopParam, sizeof(snd::internal::DspAdpcmLoopParam));
 
-                WaveFile::Channel::SeekInfo* seekInfo = new WaveFile::Channel::SeekInfo[streamSoundInfo.blockCount];
-                channel->mSeekInfo = seekInfo;
-                channel->mSeekInfoBlocks = streamSoundInfo.blockCount;
+                channel->mSeekData.mSeekInfo.allocBuffer(streamSoundInfo.blockCount);
+                channel->mSeekData.mOwner = true;
+
+                WaveFile::Channel::SeekInfo* seekInfo = channel->mSeekData.mSeekInfo.getBufferPtr();
                 for (u32 blockNo = 0; blockNo < streamSoundInfo.blockCount; blockNo++)
                 {
                     const u8* seekStart = (u8*)strmFile + reader.GetSeekBlockOffset() + sizeof(nw::ut::BinaryBlockHeader);
