@@ -1637,21 +1637,17 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             SEAD_ASSERT(extFileInfo);
 
             sound->mStreamSoundInfo.mPath = extFileInfo->filePath;
-
-            //sound->mStreamSoundInfo.mAllocateTrackFlags = strmSoundInfo.allocateTrackFlags;
-            //sound->mStreamSoundInfo.mAllocateChannelCount = strmSoundInfo.allocateChannelCount;
-
-            sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");
-            SEAD_ASSERT(device);
-
-            sead::FixedSafeString<512> dir;
-            bool b = sead::Path::getDirectoryName(&dir, getFilePath());
-            SEAD_ASSERT(b);
-
             if (sound->mStreamSoundInfo.mPath.isEmpty())
             {
                 PopupMgr::instance()->pushCurrentItemError("Path is empty");
             }
+
+            //sound->mStreamSoundInfo.mAllocateTrackFlags = strmSoundInfo.allocateTrackFlags;
+            //sound->mStreamSoundInfo.mAllocateChannelCount = strmSoundInfo.allocateChannelCount;
+
+            sead::FixedSafeString<512> dir;
+            bool b = sead::Path::getDirectoryName(&dir, getFilePath());
+            SEAD_ASSERT(b);
 
             const char* filePath = sound->mStreamSoundInfo.mPath.cstr();
 
@@ -1663,6 +1659,9 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             loadArg.path = path;
 
             bool validStrmFile = false;
+
+            sead::FileDevice* device = sead::FileDeviceMgr::instance()->findDevice("native");
+            SEAD_ASSERT(device);
 
             u8* strmFile = device->tryLoad(loadArg);
             if (strmFile)
@@ -1814,6 +1813,11 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                         sound->mStreamSoundInfo.mIsLoop = soundExt->IsLoop();
                         sound->mStreamSoundInfo.mLoopStartFrame = soundExt->loopStartFrame;
                         sound->mStreamSoundInfo.mLoopEndFrame = soundExt->loopEndFrame;
+
+                        if (sound->mStreamSoundInfo.mStreamType == Sound::StreamSoundInfo::StreamType::Adts)
+                        {
+                            PopupMgr::instance()->pushCurrentItemError("ADTS Streams are not supported");
+                        }
                     }
 
                     if (isStreamPrefetchAvailable())
@@ -2086,7 +2090,7 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             {
                 //? Can't know OutputType... Fallback to Embed
                 group->mOutputType = Group::OutputType::Embed;
-                PopupMgr::instance()->pushCurrentItemError("Couldn't find Output Type");
+                PopupMgr::instance()->pushCurrentItemError("Couldn't find Output Type\nThis can be safely ignored. (Just keep in mind if you plan to use this Group)");
             }
 
             auto addGroupItem = [&](u32 itemIdx, bool assertNotDisabled)
@@ -2533,7 +2537,7 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                     }
                     else if (reader.GetGroupItemCount() > 0)
                     {
-                        PopupMgr::instance()->pushCurrentItemError("Group has internal files but no Items");
+                        PopupMgr::instance()->pushCurrentItemError("Group has internal files but no Items (Internal Group corruption !)");
                     }
                 }
             }
