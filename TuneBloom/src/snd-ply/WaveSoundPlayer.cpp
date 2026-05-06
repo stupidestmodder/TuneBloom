@@ -3,7 +3,10 @@
 #include "snd/BankR.h"
 #include "snd/DisposeCallbackMgr.h"
 
+#include "bfsar/BfwsdFile.h"
 #include "bfsar/Sound.h"
+
+#include <ui/UI.h>
 
 WaveSoundPlayer::WaveSoundPlayer()
     : mIsRegisterPlayerCallback(false)
@@ -265,7 +268,7 @@ bool WaveSoundPlayer::startChannel(const nw::snd::internal::WaveInfo* waveInfoPt
                 mWaveSoundInfo.fxSend[i] = waveSoundInfo.getFxSend(i);
             }
 
-            if (true) // TODO: Check version
+            if (BfwsdFile::isFilterSupportedVersion(sBfsar.getVersionForBfwsd()))
             {
                 mWaveSoundInfo.lpfFreq = waveSoundInfo.getLpfFreq();
                 mWaveSoundInfo.biquadType = waveSoundInfo.getBiquadType();
