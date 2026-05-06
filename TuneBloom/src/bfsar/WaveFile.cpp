@@ -233,8 +233,8 @@ bool DrawWaveLoopInfo(bool& rIsLoop, u32& rLoopStartFrame, u32& rLoopEndFrame, u
     {
         ImGui::SameLine();
         HelpMarker(
-            "To avoid multiple re-encodes which degrade audio quality, it is recommended to set your looping parameters upfront here.\n"
-            "Alternatively, import as Pcm16 which lets you edit parameters without re-encodes, then convert to DspAdpcm once at the end."
+            "To avoid multiple re-encodes which degrade audio quality,\nit is recommended to set your looping parameters upfront here.\n"
+            "Alternatively, import as Pcm16 which lets you edit parameters without re-encodes,\nthen convert to DspAdpcm once at the end."
         );
     }
 
@@ -442,7 +442,7 @@ void WaveFile::drawUI()
 
     if (ImGui::BeginPopupModal(ICON_LC_ALERT_TRIANGLE " Warning###ENCODING", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
     {
-        ImGui::Text("Altering the Wave File encoding can result in quality loss.\nConvert anyway ?");
+        ImGui::Text("Blindly altering the Wave File encoding can degrade audio quality.\nConvert anyway ?");
         ImGui::Separator();
 
         ImVec2 buttonSize((ImGui::GetWindowContentRegionMax().x - ImGui::GetStyle().WindowPadding.x * 2.0f) / 2.0f, 0.0f);

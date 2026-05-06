@@ -175,7 +175,7 @@ void DrawSoundSetPropertiesUI()
             if (isError)
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-                name.format("%s " ICON_LC_CIRCLE_QUESTION_MARK, sound->getFormattedName().cstr());
+                name.format("%s (?)", sound->getFormattedName().cstr());
             }
 
             if (ImGui::Selectable(name.cstr()))
@@ -192,7 +192,7 @@ void DrawSoundSetPropertiesUI()
                         "The tool allows this case, except for Wave Sounds.\n"
                         "However, please note that if your game tries to explicitly\n"
                         "load this Sound Set, then all following Sounds will NOT load,\n"
-                        "including this one!"
+                        "including this one !"
                     );
                 }
             }
