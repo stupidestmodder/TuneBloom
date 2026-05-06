@@ -33,7 +33,7 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
     struct ChannelInfo
     {
         ChannelInfo()
-            : buffer(nullptr), shouldDelete(false), endian(sead::Endian::getHostEndian())
+            : buffer(nullptr), shouldDelete(false)
         {
         }
 
@@ -47,7 +47,6 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
 
         u8* buffer;
         bool shouldDelete;
-        sead::Endian::Types endian;
         snd::DspAdpcmParam adpcmParam;
         snd::internal::DspAdpcmLoopParam adpcmLoopParam;
         WaveFile::Channel::SeekData seekData;
@@ -100,6 +99,7 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
     u32 loopStartFrame = mainWave.getLoopStartFrame(true);
     u32 loopEndFrame = mainWave.getLoopEndFrame(true);
     bool isLoop = mainWave.getIsLoop();
+    bool isDspAdpcm = mainWave.getEncoding() == WaveFile::Encoding::DspAdpcm;
 
     u32 sampleCount = loopEndFrame;
     u32 samplePerBlock = nw::snd::internal::Util::GetSampleByByte(cDefaultBytesPerBlock, sampleFormat);
@@ -118,26 +118,47 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
             const WaveFile::Channel& channel = *channels[i];
             ChannelInfo& channelInfo = channelInfos[i];
 
+            auto convertEndian = [&](sead::Endian::Types dataEndian)
+            {
+                if (dataEndian != endian)
+                {
+                    s16* samples = (s16*)channelInfo.buffer;
+
+                    for (u32 s = 0; s < sampleCount; s++)
+                    {
+                        samples[s] = sead::Endian::convertS16(dataEndian, endian, samples[s]);
+                    }
+                }
+            };
+
             if (currentWave.getIsStreamExtended() &&
                 currentWave.getLoopStartFrame(true) == loopStartFrame &&
                 currentWave.getLoopEndFrame(true) == loopEndFrame)
             {
                 channelInfo.buffer = new u8[mainWaveSize];
                 channelInfo.shouldDelete = true;
-                channelInfo.endian = currentWave.getDataEndian();
 
                 const void* src = channel.getData();
                 u8* dst = channelInfo.buffer;
 
                 sead::MemUtil::copy(dst, src, mainWaveSize);
 
-                channelInfo.adpcmParam = channel.getAdpcmParam(true);
-                channelInfo.adpcmLoopParam = channel.getAdpcmLoopParam(true);
-                channelInfo.seekData.mSeekInfo.setBuffer(
-                    channel.getSeekData().mSeekInfo.size(),
-                    const_cast<WaveFile::Channel::SeekInfo*>(channel.getSeekData().mSeekInfo.getBufferPtr())
-                );
-                channelInfo.seekData.mOwner = false;
+                if (isDspAdpcm)
+                {
+                    channelInfo.adpcmParam = channel.getAdpcmParam(true);
+                    channelInfo.adpcmLoopParam = channel.getAdpcmLoopParam(true);
+                    channelInfo.seekData.mSeekInfo.setBuffer(
+                        channel.getSeekData().mSeekInfo.size(),
+                        const_cast<WaveFile::Channel::SeekInfo*>(channel.getSeekData().mSeekInfo.getBufferPtr())
+                    );
+                    channelInfo.seekData.mOwner = false;
+                }
+
+                if (currentWave.getEncoding() == WaveFile::Encoding::Pcm16)
+                {
+                    sead::Endian::Types dataEndian = currentWave.getDataEndian();
+                    convertEndian(dataEndian);
+                }
             }
             else
             {
@@ -153,12 +174,17 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
                     &channelInfo.seekData
                 );
                 channelInfo.shouldDelete = true;
-                channelInfo.endian = sead::Endian::getHostEndian();
+
+                if (currentWave.getEncoding() == WaveFile::Encoding::Pcm16)
+                {
+                    sead::Endian::Types dataEndian = sead::Endian::getHostEndian();
+                    convertEndian(dataEndian);
+                }
             }
         }
     }
 
-    bool hasSeekBlock = mainWave.getEncoding() == WaveFile::Encoding::DspAdpcm;
+    bool hasSeekBlock = isDspAdpcm;
     bool hasRegionBlock = false; // TODO
 
     u32 fileBlockCount = 2;
@@ -287,7 +313,7 @@ bool WriteBfstmFile(sead::FileHandle& handle, const Sound::StreamSoundInfo& soun
             for (u32 i = 0; i < channelNum; i++)
             {
                 sead::FormatFixedSafeString<32> refName("DetailChannelInfoRef%i", i);
-                if (mainWave.getEncoding() == WaveFile::Encoding::DspAdpcm)
+                if (isDspAdpcm)
                 {
                     writer.closeReference(refName, nw::snd::internal::ElementType_Codec_DspAdpcmInfo);
 
@@ -562,7 +588,7 @@ bool ReadStreamWaves(Sound* sound, const void* strmFile)
             }
         }
 
-        if (encoding == WaveFile::Encoding::DspAdpcm)
+        if (wave->mEncoding == WaveFile::Encoding::DspAdpcm)
         {
             wave->updateLoopInfo_(true, false); //? Update as the ones in the BFSTM can differ
         }
