@@ -832,18 +832,29 @@ bool WaveFile::readRiffWavInfo(RiffWaveInfo* out)
         return false;
     }
 
-    // TODO: Search and find 'data' block instead of assuming it's the first one
-    char data[4];
-    stream.readMemBlock(data, 4);
-
-    if (sead::MemUtil::compare(data, "data", 4) != 0)
+    while (!stream.isEOF())
     {
-        PopupMgr::instance()->addPopup({ "Invalid 'data' header" });
-        return false;
+        char block[4];
+        stream.readMemBlock(block, 4);
+        u32 blockSize = stream.readU32();
+
+        if (sead::MemUtil::compare(block, "data", 4) == 0)
+        {
+            out->sampleBytes = blockSize;
+            out->dataStart = handle.getCurrentSeekPos();
+            break;
+        }
+        else
+        {
+            stream.skip(blockSize);
+        }
     }
 
-    out->sampleBytes = stream.readU32();
-    out->dataStart = handle.getCurrentSeekPos();
+    if (out->sampleBytes == 0)
+    {
+        PopupMgr::instance()->addPopup({ "No 'data' block found" });
+        return false;
+    }
 
     out->sampleFormat = out->bitsPerSample == 8 ? snd::SampleFormat::PcmS8 : snd::SampleFormat::PcmS16;
     out->sampleCount = out->sampleBytes / out->numChannels / (out->bitsPerSample / 8);
