@@ -1435,7 +1435,7 @@ void* WaveFile::convertChannel_(
     }
 
     //? Spool PCM data
-    u32 framesAfterLoopEnd = isLoop ? cFramesAfterLoopEnd : 0; //? Needed for seamless looping (prevents pops)
+    u32 framesAfterLoopEnd = (isLoop && to == Encoding::DspAdpcm) ? cFramesAfterLoopEnd : 0; //? Needed for seamless looping (prevents pops)
     u32 totalSamples = loopEndFrameStream + framesAfterLoopEnd;
     s16* spooledPcm = new s16[totalSamples];
     {
