@@ -1,5 +1,4 @@
 project "TuneBloom"
-    kind "ConsoleApp"
     language "C++"
     cppdialect "C++20"
     systemversion "latest"
@@ -41,12 +40,14 @@ project "TuneBloom"
         }
 
     filter "configurations:Debug"
+        kind "ConsoleApp"
         defines { "SEAD_TARGET_DEBUG" }
         runtime "Debug"
         symbols "on"
         optimize "off"
 
     filter "configurations:Release"
+        kind "ConsoleApp"
         defines { "SEAD_TARGET_DEBUG" }
         runtime "Release"
         symbols "on"
@@ -54,6 +55,7 @@ project "TuneBloom"
         flags { "LinkTimeOptimization" }
 
     filter "configurations:Dist"
+        kind "WindowedApp"
         defines { "SEAD_TARGET_DEBUG", "NDEBUG" }
         runtime "Release"
         symbols "off"
