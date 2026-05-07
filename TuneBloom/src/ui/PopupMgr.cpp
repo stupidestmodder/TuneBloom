@@ -129,6 +129,7 @@ void PopupMgr::updateErrors_()
 {
     if (mProcessedErrors.empty())
     {
+        sBfsar.clearGenWaveArchiveList();
         return;
     }
 

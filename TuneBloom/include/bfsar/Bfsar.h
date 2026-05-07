@@ -163,6 +163,11 @@ public:
         return mBankFileList;
     }
 
+    void clearGenWaveArchiveList()
+    {
+        mGenWaveArchiveList.clear();
+    }
+
     const Item* getItem(u32 id, const Item::List& list) const
     {
         if (id != Item::cInvalidId)
@@ -310,4 +315,6 @@ private:
     SequenceFile::List mSequenceFileList;
 
     BankFile::List mBankFileList;
+
+    Item::List mGenWaveArchiveList; // ..........so we can display warnings on open
 };

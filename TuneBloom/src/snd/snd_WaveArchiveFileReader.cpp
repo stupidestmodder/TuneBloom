@@ -30,7 +30,7 @@ void WaveArchiveFileReader::Initialize(const void* pWaveArchiveFile, bool isIndi
 {
     if (pWaveArchiveFile == nullptr)
     {
-        PopupMgr::instance()->setCorruptInfo("BFWAR file is nullptr");
+        PopupMgr::instance()->pushCurrentItemError("No file");
         return;
     }
 
@@ -40,7 +40,7 @@ void WaveArchiveFileReader::Initialize(const void* pWaveArchiveFile, bool isIndi
         // if (sead::MemUtil::compare(header->signature, "CWAR", 4) != 0)
         if (sead::MemUtil::compare(header->signature, "FWAR", 4) != 0)
         {
-            PopupMgr::instance()->setCorruptInfo("File is not a valid BFWAR");
+            PopupMgr::instance()->pushCurrentItemError("File is not a valid BFWAR");
             return;
         }
 
@@ -48,7 +48,7 @@ void WaveArchiveFileReader::Initialize(const void* pWaveArchiveFile, bool isIndi
         if (header->version != 0x00010000)
         {
             sead::FormatFixedSafeString<64> msg("BFWAR version not supported (0x%08X)", (u32)header->version);
-            PopupMgr::instance()->setCorruptInfo(msg);
+            PopupMgr::instance()->pushCurrentItemError(msg);
             return;
         }
     }

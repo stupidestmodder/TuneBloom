@@ -60,6 +60,8 @@ Bfsar::Bfsar()
     , mSequenceFileList()
 
     , mBankFileList()
+
+    , mGenWaveArchiveList()
 {
 }
 
@@ -665,39 +667,62 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                 return false;
             }
 
-            nw::snd::internal::WaveArchiveFileReader reader(soundArchive.detail_GetFileAddress(warcInfo->fileId));
-            if (!reader.IsAvailable())
+            Item* warc = new(heap) Item();
+            warc->mId = 0;
+            warc->mItemType = Item::ItemType::WaveArchive;
+
+            PopupMgr::instance()->setCurrentProcessItem(warc);
+            mGenWaveArchiveList.pushBack(warc);
+
+            warc->mEnableName = true;
+            if (mIncludeStringTable && warcInfo->GetStringId() != nw::snd::internal::DEFAULT_STRING_ID)
             {
-                return false;
+                warc->mName = soundArchive.GetString(warcInfo->GetStringId());
+            }
+            else
+            {
+                warc->mName.format("@AutoGen_WARC_%u", 0);
             }
 
-            const u32 waveFileCount = reader.GetWaveFileCount();
-            for (u32 j = 0; j < waveFileCount; j++)
+            if (warcInfo->isLoadIndividual)
             {
-                const void* waveFile = reader.GetWaveFile(j);
-                u32 waveFileSize = reader.GetWaveFileSize(j);
-
-                std::string hash = md5(waveFile, waveFileSize);
-
-                u32 globalId = mWaveFileList.size();
-
-                WaveFile* wave = new(heap) WaveFile();
-                wave->mId = globalId;
-
-                wave->mEnableName = true;
-                wave->mName = "Wave";
-
-                PopupMgr::instance()->setCurrentProcessItem(wave);
-                if (!wave->read(waveFile))
+                if (warcInfo->optionParameter.GetTrueCount(nw::snd::internal::WAVE_ARCHIVE_INFO_WAVE_COUNT) == 0)
                 {
+                    PopupMgr::instance()->pushCurrentItemError("Uh");
                 }
-
-                mWaveFileList.pushBack(wave);
-                warcFileCache[0].emplace_back(hash, globalId, waveFile, waveFileSize);
-                waveIdMapSet[0].insert(globalId);
             }
-            SEAD_ASSERT(warcFileCache[0].size() == waveFileCount);
-            SEAD_ASSERT(waveIdMapSet[0].size() == waveFileCount);
+
+            nw::snd::internal::WaveArchiveFileReader reader(soundArchive.detail_GetFileAddress(warcInfo->fileId));
+            if (reader.IsAvailable())
+            {
+                const u32 waveFileCount = reader.GetWaveFileCount();
+                for (u32 j = 0; j < waveFileCount; j++)
+                {
+                    const void* waveFile = reader.GetWaveFile(j);
+                    u32 waveFileSize = reader.GetWaveFileSize(j);
+
+                    std::string hash = md5(waveFile, waveFileSize);
+
+                    u32 globalId = mWaveFileList.size();
+
+                    WaveFile* wave = new(heap) WaveFile();
+                    wave->mId = globalId;
+
+                    wave->mEnableName = true;
+                    wave->mName = "Wave";
+
+                    PopupMgr::instance()->setCurrentProcessItem(wave);
+                    if (!wave->read(waveFile))
+                    {
+                    }
+
+                    mWaveFileList.pushBack(wave);
+                    warcFileCache[0].emplace_back(hash, globalId, waveFile, waveFileSize);
+                    waveIdMapSet[0].insert(globalId);
+                }
+                SEAD_ASSERT(warcFileCache[0].size() == waveFileCount);
+                SEAD_ASSERT(waveIdMapSet[0].size() == waveFileCount);
+            }
         }
 
         for (u32 i = 1; i < warcNum; i++)
@@ -710,10 +735,35 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                 return false;
             }
 
+            Item* warc = new(heap) Item();
+            warc->mId = i;
+            warc->mItemType = Item::ItemType::WaveArchive;
+
+            PopupMgr::instance()->setCurrentProcessItem(warc);
+            mGenWaveArchiveList.pushBack(warc);
+
+            warc->mEnableName = true;
+            if (mIncludeStringTable && warcInfo->GetStringId() != nw::snd::internal::DEFAULT_STRING_ID)
+            {
+                warc->mName = soundArchive.GetString(warcInfo->GetStringId());
+            }
+            else
+            {
+                warc->mName.format("@AutoGen_WARC_%u", i);
+            }
+
+            if (warcInfo->isLoadIndividual)
+            {
+                if (warcInfo->optionParameter.GetTrueCount(nw::snd::internal::WAVE_ARCHIVE_INFO_WAVE_COUNT) == 0)
+                {
+                    PopupMgr::instance()->pushCurrentItemError("Uh");
+                }
+            }
+
             nw::snd::internal::WaveArchiveFileReader reader(soundArchive.detail_GetFileAddress(warcInfo->fileId));
             if (!reader.IsAvailable())
             {
-                return false;
+                continue;
             }
 
             const u32 waveFileCount = reader.GetWaveFileCount();
@@ -800,13 +850,6 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             }
 
             warc->mIsLoadIndividual = warcInfo->isLoadIndividual;
-            if (warc->mIsLoadIndividual)
-            {
-                if (warcInfo->optionParameter.GetTrueCount(nw::snd::internal::WAVE_ARCHIVE_INFO_WAVE_COUNT) == 0)
-                {
-                    PopupMgr::instance()->pushCurrentItemError("Uh");
-                }
-            }
 
             mWaveArchiveList.pushBack(warc);
         }
@@ -2164,7 +2207,7 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             {
                 //? Can't know OutputType... Fallback to Embed
                 group->mOutputType = Group::OutputType::Embed;
-                PopupMgr::instance()->pushCurrentItemError("Couldn't find Output Type (Group is empty)\nThis can be safely ignored. (Just keep in mind if you plan to use this Group)");
+                PopupMgr::instance()->pushCurrentItemError("Couldn't find Output Type (Group is empty)\n\nThis can be safely ignored.\n(Just keep in mind if you plan to use this Group)");
             }
 
             auto addGroupItem = [&](u32 itemIdx, bool assertNotDisabled)
@@ -5032,6 +5075,7 @@ void Bfsar::close_()
     mWaveFileList.clear();
     mSequenceFileList.clear();
     mBankFileList.clear();
+    clearGenWaveArchiveList();
 }
 
 bool Bfsar::validate_()
