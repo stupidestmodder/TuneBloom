@@ -1933,20 +1933,26 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
                     SEAD_ASSERT(success);
 
                     //? noteInfo.waveIndex is patched with global wave index already
-                    SEAD_ASSERT(noteInfo.waveArchiveId == 0);
-                    WaveFile* waveFile = static_cast<WaveFile*>(getItem(noteInfo.waveIndex, getWaveFileList()));
-
-                    sound->mWaveSoundInfo.mWaveFileRef.attach(waveFile);
-                    if (sound->mWaveSoundInfo.mWaveFileRef.isAttached())
+                    if (noteInfo.waveArchiveId == 0)
                     {
-                        if (waveFile->mName == "Wave")
+                        WaveFile* waveFile = static_cast<WaveFile*>(getItem(noteInfo.waveIndex, getWaveFileList()));
+
+                        sound->mWaveSoundInfo.mWaveFileRef.attach(waveFile);
+                        if (sound->mWaveSoundInfo.mWaveFileRef.isAttached())
                         {
-                            waveFile->mName.format("GUESS_%s", sound->mName.cstr());
+                            if (waveFile->mName == "Wave")
+                            {
+                                waveFile->mName.format("GUESS_%s", sound->mName.cstr());
+                            }
+                        }
+                        else
+                        {
+                            PopupMgr::instance()->pushCurrentItemError("Couldn't load the Wave File referenced");
                         }
                     }
                     else
                     {
-                        PopupMgr::instance()->pushCurrentItemError("Couldn't load the Wave File referenced");
+                        PopupMgr::instance()->pushCurrentItemError("Internal error (failed BFWSD patch)");
                     }
 
                     const nw::snd::internal::WaveSoundFile::WaveSoundInfo& innerWaveSoundInfo = reader.GetWaveSoundInfo(waveSoundInfo.index);

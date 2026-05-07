@@ -43,7 +43,7 @@ public:
             SEAD_ASSERT(mVelocityMax <= 127);
         }
 
-        void read(const nw::snd::internal::BankFile::VelocityRegion* velocityRegionInfo, const nw::snd::internal::Util::WaveIdTable& waveIdTable);
+        void read(const nw::snd::internal::BankFile::VelocityRegion* velocityRegionInfo, const nw::snd::internal::Util::WaveIdTable& waveIdTable, u32 instrumentId);
         void drawUI();
 
         u8 getVelocityMin() const
@@ -201,7 +201,7 @@ public:
             SEAD_ASSERT(mKeyMax <= 127);
         }
 
-        void read(const nw::snd::internal::BankFile::KeyRegion* keyRegionInfo, const nw::snd::internal::Util::WaveIdTable& waveIdTable);
+        void read(const nw::snd::internal::BankFile::KeyRegion* keyRegionInfo, const nw::snd::internal::Util::WaveIdTable& waveIdTable, u32 instrumentId);
 
         const VelocityRegion* getVelocityRegion(u8 velocity) const
         {

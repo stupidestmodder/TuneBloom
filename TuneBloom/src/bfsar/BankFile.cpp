@@ -71,15 +71,26 @@ static bool KeyboardFunc(void* UserData, s32 Msg, s32 Key, f32 Vel)
     return false;
 }
 
-void BankFile::VelocityRegion::read(const nw::snd::internal::BankFile::VelocityRegion* velocityRegionInfo, const nw::snd::internal::Util::WaveIdTable& waveIdTable)
+void BankFile::VelocityRegion::read(const nw::snd::internal::BankFile::VelocityRegion* velocityRegionInfo, const nw::snd::internal::Util::WaveIdTable& waveIdTable, u32 instrumentId)
 {
-    const nw::snd::internal::Util::WaveId* waveId = waveIdTable.GetWaveId(velocityRegionInfo->waveIdTableIndex);
-    SEAD_ASSERT(waveId);
-
     //? waveId->waveIndex is patched with global wave index already
-    SEAD_ASSERT(waveId->waveArchiveId == 0);
-    WaveFile* waveFile = static_cast<WaveFile*>(sBfsar.getItem(waveId->waveIndex, sBfsar.getWaveFileList()));
-    mWaveFileRef.attach(waveFile);
+    const nw::snd::internal::Util::WaveId* waveId = waveIdTable.GetWaveId(velocityRegionInfo->waveIdTableIndex);
+    if (waveId && waveId->waveArchiveId == 0)
+    {
+        WaveFile* waveFile = static_cast<WaveFile*>(sBfsar.getItem(waveId->waveIndex, sBfsar.getWaveFileList()));
+
+        mWaveFileRef.attach(waveFile);
+        if (!mWaveFileRef.isAttached())
+        {
+            sead::FormatFixedSafeString<256> msg("Instrument %u: Couldn't load the Wave File referenced", instrumentId);
+            PopupMgr::instance()->pushCurrentItemError(msg);
+        }
+    }
+    else
+    {
+        sead::FormatFixedSafeString<256> msg("Instrument %u: Internal error (failed BFBNK patch)", instrumentId);
+        PopupMgr::instance()->pushCurrentItemError(msg);
+    }
 
     mOriginalKey = velocityRegionInfo->GetOriginalKey();
     mVolume = velocityRegionInfo->GetVolume();
@@ -232,7 +243,7 @@ void BankFile::VelocityRegion::drawUI()
     }
 }
 
-void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* keyRegionInfo, const nw::snd::internal::Util::WaveIdTable& waveIdTable)
+void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* keyRegionInfo, const nw::snd::internal::Util::WaveIdTable& waveIdTable, u32 instrumentId)
 {
     SEAD_ASSERT(keyRegionInfo);
 
@@ -241,8 +252,13 @@ void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* key
         case nw::snd::internal::REGION_TYPE_DIRECT:
         {
             const nw::snd::internal::DirectChunk& directChunk = keyRegionInfo->GetDirectChunk();
-            SEAD_ASSERT(directChunk.toRegion.typeId == nw::snd::internal::ElementType_BankFile_VelocityRegionInfo);
-            SEAD_ASSERT(directChunk.toRegion.offset != nw::snd::internal::Util::Reference::INVALID_OFFSET);
+            if (directChunk.toRegion.typeId != nw::snd::internal::ElementType_BankFile_VelocityRegionInfo ||
+                directChunk.toRegion.offset == nw::snd::internal::Util::Reference::INVALID_OFFSET)
+            {
+                sead::FormatFixedSafeString<256> msg("Instrument %u: VelocityRegion error (Direct)", instrumentId);
+                PopupMgr::instance()->pushCurrentItemError(msg);
+                break;
+            }
 
             const nw::snd::internal::BankFile::VelocityRegion* velocityRegionInfo = static_cast<const nw::snd::internal::BankFile::VelocityRegion*>(directChunk.GetRegion());
 
@@ -252,7 +268,7 @@ void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* key
             velocityRegion->mEnableName = true;
             velocityRegion->mName = "VelocityRegion";
 
-            velocityRegion->read(velocityRegionInfo, waveIdTable);
+            velocityRegion->read(velocityRegionInfo, waveIdTable, instrumentId);
 
             mVelocityRegionList.pushBack(velocityRegion);
             break;
@@ -267,15 +283,27 @@ void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* key
             u8 velocityMin = 0;
             for (u32 i = 0; i < velocityRegionCount; i++)
             {
+                u8 velocityMax = rangeChunk.borderTable.item[i];
+
                 const nw::snd::internal::Util::Reference* velocityRegionRef = static_cast<const nw::snd::internal::Util::Reference*>(rangeChunk.GetRegionRef(velocityMin));
-                SEAD_ASSERT(velocityRegionRef);
-                SEAD_ASSERT(velocityRegionRef->typeId == nw::snd::internal::ElementType_BankFile_VelocityRegionInfo);
-                SEAD_ASSERT(velocityRegionRef->offset != nw::snd::internal::Util::Reference::INVALID_OFFSET);
+                if (!velocityRegionRef ||
+                    velocityRegionRef->typeId != nw::snd::internal::ElementType_BankFile_VelocityRegionInfo ||
+                    velocityRegionRef->offset == nw::snd::internal::Util::Reference::INVALID_OFFSET)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: VelocityRegion error (Range)", instrumentId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    velocityMin = velocityMax + 1;
+                    continue;
+                }
 
                 const nw::snd::internal::BankFile::VelocityRegion* velocityRegionInfo = static_cast<const nw::snd::internal::BankFile::VelocityRegion*>(rangeChunk.GetRegion(velocityMin));
-                SEAD_ASSERT(velocityRegionInfo);
-
-                u8 velocityMax = rangeChunk.borderTable.item[i];
+                if (!velocityRegionInfo)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: VelocityRegion error (Range)", instrumentId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    velocityMin = velocityMax + 1;
+                    continue;
+                }
 
                 VelocityRegion* velocityRegion = new VelocityRegion(velocityMin, velocityMax);
                 velocityRegion->mId = mVelocityRegionList.size();
@@ -283,7 +311,7 @@ void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* key
                 velocityRegion->mEnableName = true;
                 velocityRegion->mName = "VelocityRegion";
 
-                velocityRegion->read(velocityRegionInfo, waveIdTable);
+                velocityRegion->read(velocityRegionInfo, waveIdTable, instrumentId);
 
                 mVelocityRegionList.pushBack(velocityRegion);
 
@@ -303,7 +331,12 @@ void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* key
             for (u32 i = indexChunk.min; i <= indexChunk.max; i++)
             {
                 const nw::snd::internal::Util::Reference* velocityRegionRef = static_cast<const nw::snd::internal::Util::Reference*>(indexChunk.GetRegionRef(i));
-                SEAD_ASSERT(velocityRegionRef);
+                if (!velocityRegionRef)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: VelocityRegion error (Index)", instrumentId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    continue;
+                }
 
                 if (velocityRegionRef->offset != prevOffset)
                 {
@@ -321,15 +354,27 @@ void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* key
             u8 velocityMin = 0;
             for (u32 i = 0; i < borders.size(); i++)
             {
+                u8 velocityMax = borders[i];
+
                 const nw::snd::internal::Util::Reference* velocityRegionRef = static_cast<const nw::snd::internal::Util::Reference*>(indexChunk.GetRegionRef(velocityMin));
-                SEAD_ASSERT(velocityRegionRef);
-                SEAD_ASSERT(velocityRegionRef->typeId == nw::snd::internal::ElementType_BankFile_VelocityRegionInfo);
-                SEAD_ASSERT(velocityRegionRef->offset != nw::snd::internal::Util::Reference::INVALID_OFFSET);
+                if (!velocityRegionRef ||
+                    velocityRegionRef->typeId != nw::snd::internal::ElementType_BankFile_VelocityRegionInfo ||
+                    velocityRegionRef->offset == nw::snd::internal::Util::Reference::INVALID_OFFSET)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: VelocityRegion error (Index)", instrumentId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    velocityMin = velocityMax + 1;
+                    continue;
+                }
 
                 const nw::snd::internal::BankFile::VelocityRegion* velocityRegionInfo = static_cast<const nw::snd::internal::BankFile::VelocityRegion*>(indexChunk.GetRegion(velocityMin));
-                SEAD_ASSERT(velocityRegionInfo);
-
-                u8 velocityMax = borders[i];
+                if (!velocityRegionInfo)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: VelocityRegion error (Index)", instrumentId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    velocityMin = velocityMax + 1;
+                    continue;
+                }
 
                 VelocityRegion* velocityRegion = new VelocityRegion(velocityMin, velocityMax);
                 velocityRegion->mId = mVelocityRegionList.size();
@@ -337,7 +382,7 @@ void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* key
                 velocityRegion->mEnableName = true;
                 velocityRegion->mName = "VelocityRegion";
 
-                velocityRegion->read(velocityRegionInfo, waveIdTable);
+                velocityRegion->read(velocityRegionInfo, waveIdTable, instrumentId);
 
                 mVelocityRegionList.pushBack(velocityRegion);
 
@@ -346,11 +391,16 @@ void BankFile::KeyRegion::read(const nw::snd::internal::BankFile::KeyRegion* key
         }
 
         default:
-            SEAD_ASSERT(false);
+            sead::FormatFixedSafeString<256> msg("Instrument %u: Invalid KeyRegion type", instrumentId);
+            PopupMgr::instance()->pushCurrentItemError(msg);
             break;
     }
 
-    SEAD_ASSERT(mVelocityRegionList.size() > 0);
+    if (mVelocityRegionList.isEmpty())
+    {
+        sead::FormatFixedSafeString<256> msg("Instrument %u: VelocityRegion empty", instrumentId);
+        PopupMgr::instance()->pushCurrentItemError(msg);
+    }
 }
 
 void BankFile::Instrument::read(const nw::snd::internal::BankFile::Instrument* instrumentInfo, const nw::snd::internal::Util::WaveIdTable& waveIdTable)
@@ -362,8 +412,13 @@ void BankFile::Instrument::read(const nw::snd::internal::BankFile::Instrument* i
         case nw::snd::internal::REGION_TYPE_DIRECT:
         {
             const nw::snd::internal::DirectChunk& directChunk = instrumentInfo->GetDirectChunk();
-            SEAD_ASSERT(directChunk.toRegion.typeId == nw::snd::internal::ElementType_BankFile_KeyRegionInfo);
-            SEAD_ASSERT(directChunk.toRegion.offset != nw::snd::internal::Util::Reference::INVALID_OFFSET);
+            if (directChunk.toRegion.typeId != nw::snd::internal::ElementType_BankFile_KeyRegionInfo ||
+                directChunk.toRegion.offset == nw::snd::internal::Util::Reference::INVALID_OFFSET)
+            {
+                sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Direct)", mId);
+                PopupMgr::instance()->pushCurrentItemError(msg);
+                break;
+            }
 
             const nw::snd::internal::BankFile::KeyRegion* keyRegionInfo = static_cast<const nw::snd::internal::BankFile::KeyRegion*>(directChunk.GetRegion());
 
@@ -373,7 +428,7 @@ void BankFile::Instrument::read(const nw::snd::internal::BankFile::Instrument* i
             keyRegion->mEnableName = true;
             keyRegion->mName = "KeyRegion";
 
-            keyRegion->read(keyRegionInfo, waveIdTable);
+            keyRegion->read(keyRegionInfo, waveIdTable, mId);
 
             mKeyRegionList.pushBack(keyRegion);
             break;
@@ -388,25 +443,47 @@ void BankFile::Instrument::read(const nw::snd::internal::BankFile::Instrument* i
             u8 keyMin = 0;
             for (u32 i = 0; i < keyRegionCount; i++)
             {
-                const nw::snd::internal::Util::Reference* keyRegionRef = static_cast<const nw::snd::internal::Util::Reference*>(rangeChunk.GetRegionRef(keyMin));
-                SEAD_ASSERT(keyRegionRef);
-
                 u8 keyMax = rangeChunk.borderTable.item[i];
+
+                const nw::snd::internal::Util::Reference* keyRegionRef = static_cast<const nw::snd::internal::Util::Reference*>(rangeChunk.GetRegionRef(keyMin));
+                if (!keyRegionRef)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Range)", mId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    keyMin = keyMax + 1;
+                    continue;
+                }
 
                 if (keyRegionRef->offset == nw::snd::internal::Util::Reference::INVALID_OFFSET)
                 {
-                    SEAD_ASSERT(keyRegionRef->typeId == nw::snd::internal::ElementType_BankFile_NullInfo); //? BFSARs saved with Citric break this assertion...
+                    if (keyRegionRef->typeId != nw::snd::internal::ElementType_BankFile_NullInfo)
+                    {
+                        sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Range)", mId);
+                        PopupMgr::instance()->pushCurrentItemError(msg);
+                    }
 
                     keyMin = keyMax + 1;
                     continue;
                 }
                 else
                 {
-                    SEAD_ASSERT(keyRegionRef->typeId == nw::snd::internal::ElementType_BankFile_KeyRegionInfo);
+                    if (keyRegionRef->typeId != nw::snd::internal::ElementType_BankFile_KeyRegionInfo)
+                    {
+                        sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Range)", mId);
+                        PopupMgr::instance()->pushCurrentItemError(msg);
+                        keyMin = keyMax + 1;
+                        continue;
+                    }
                 }
 
                 const nw::snd::internal::BankFile::KeyRegion* keyRegionInfo = static_cast<const nw::snd::internal::BankFile::KeyRegion*>(rangeChunk.GetRegion(keyMin));
-                SEAD_ASSERT(keyRegionInfo);
+                if (!keyRegionInfo)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Range)", mId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    keyMin = keyMax + 1;
+                    continue;
+                }
 
                 KeyRegion* keyRegion = new KeyRegion(keyMin, keyMax);
                 keyRegion->mId = mKeyRegionList.size();
@@ -414,7 +491,7 @@ void BankFile::Instrument::read(const nw::snd::internal::BankFile::Instrument* i
                 keyRegion->mEnableName = true;
                 keyRegion->mName = "KeyRegion";
 
-                keyRegion->read(keyRegionInfo, waveIdTable);
+                keyRegion->read(keyRegionInfo, waveIdTable, mId);
 
                 mKeyRegionList.pushBack(keyRegion);
 
@@ -434,7 +511,12 @@ void BankFile::Instrument::read(const nw::snd::internal::BankFile::Instrument* i
             for (u32 i = indexChunk.min; i <= indexChunk.max; i++)
             {
                 const nw::snd::internal::Util::Reference* keyRegionRef = static_cast<const nw::snd::internal::Util::Reference*>(indexChunk.GetRegionRef(i));
-                SEAD_ASSERT(keyRegionRef);
+                if (!keyRegionRef)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Index)", mId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    continue;
+                }
 
                 if (keyRegionRef->offset != prevOffset)
                 {
@@ -452,25 +534,47 @@ void BankFile::Instrument::read(const nw::snd::internal::BankFile::Instrument* i
             u8 keyMin = 0;
             for (u32 i = 0; i < borders.size(); i++)
             {
-                const nw::snd::internal::Util::Reference* keyRegionRef = static_cast<const nw::snd::internal::Util::Reference*>(indexChunk.GetRegionRef(keyMin));
-                SEAD_ASSERT(keyRegionRef);
-
                 u8 keyMax = borders[i];
+
+                const nw::snd::internal::Util::Reference* keyRegionRef = static_cast<const nw::snd::internal::Util::Reference*>(indexChunk.GetRegionRef(keyMin));
+                if (!keyRegionRef)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Index)", mId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    keyMin = keyMax + 1;
+                    continue;
+                }
 
                 if (keyRegionRef->offset == nw::snd::internal::Util::Reference::INVALID_OFFSET)
                 {
-                    SEAD_ASSERT(keyRegionRef->typeId == nw::snd::internal::ElementType_BankFile_NullInfo);
+                    if (keyRegionRef->typeId != nw::snd::internal::ElementType_BankFile_NullInfo)
+                    {
+                        sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Index)", mId);
+                        PopupMgr::instance()->pushCurrentItemError(msg);
+                    }
 
                     keyMin = keyMax + 1;
                     continue;
                 }
                 else
                 {
-                    SEAD_ASSERT(keyRegionRef->typeId == nw::snd::internal::ElementType_BankFile_KeyRegionInfo);
+                    if (keyRegionRef->typeId != nw::snd::internal::ElementType_BankFile_KeyRegionInfo)
+                    {
+                        sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Index)", mId);
+                        PopupMgr::instance()->pushCurrentItemError(msg);
+                        keyMin = keyMax + 1;
+                        continue;
+                    }
                 }
 
                 const nw::snd::internal::BankFile::KeyRegion* keyRegionInfo = static_cast<const nw::snd::internal::BankFile::KeyRegion*>(indexChunk.GetRegion(keyMin));
-                SEAD_ASSERT(keyRegionInfo);
+                if (!keyRegionInfo)
+                {
+                    sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion error (Index)", mId);
+                    PopupMgr::instance()->pushCurrentItemError(msg);
+                    keyMin = keyMax + 1;
+                    continue;
+                }
 
                 KeyRegion* keyRegion = new KeyRegion(keyMin, keyMax);
                 keyRegion->mId = mKeyRegionList.size();
@@ -478,7 +582,7 @@ void BankFile::Instrument::read(const nw::snd::internal::BankFile::Instrument* i
                 keyRegion->mEnableName = true;
                 keyRegion->mName = "KeyRegion";
 
-                keyRegion->read(keyRegionInfo, waveIdTable);
+                keyRegion->read(keyRegionInfo, waveIdTable, mId);
 
                 mKeyRegionList.pushBack(keyRegion);
 
@@ -489,11 +593,16 @@ void BankFile::Instrument::read(const nw::snd::internal::BankFile::Instrument* i
         }
 
         default:
-            SEAD_ASSERT(false);
+            sead::FormatFixedSafeString<256> msg("Instrument %u: Invalid Instrument type", mId);
+            PopupMgr::instance()->pushCurrentItemError(msg);
             break;
     }
 
-    SEAD_ASSERT(mKeyRegionList.size() > 0);
+    if (mKeyRegionList.isEmpty())
+    {
+        sead::FormatFixedSafeString<256> msg("Instrument %u: KeyRegion empty", mId);
+        PopupMgr::instance()->pushCurrentItemError(msg);
+    }
 }
 
 void BankFile::Instrument::drawUI()
@@ -544,6 +653,12 @@ const Item* BankFile::validate(sead::BufferedSafeString& error) const
         {
             SEAD_ASSERT(keyRegionItem->getItemType() == Item::ItemType::BankFileKeyRegion);
             const BankFile::KeyRegion* keyRegion = static_cast<const BankFile::KeyRegion*>(keyRegionItem);
+
+            if (keyRegion->getVelocityRegionList().isEmpty())
+            {
+                error.format("Instrument %u: Key Region has no Velocity Region", i);
+                return instrument;
+            }
 
             for (const Item* velocityRegionItem : keyRegion->getVelocityRegionList())
             {
@@ -1604,8 +1719,6 @@ bool BankFile::doRead(const void* fileAddr)
     {
         return false;
     }
-
-    // TODO: Validate
 
     using InstrumentItemPair = std::pair<s16, const nw::snd::internal::BankFile::Instrument*>;
     std::vector<InstrumentItemPair> instruments;
