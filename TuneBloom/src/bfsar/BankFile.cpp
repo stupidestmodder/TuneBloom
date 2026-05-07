@@ -162,7 +162,7 @@ void BankFile::VelocityRegion::drawUI()
 
     {
         u8 pan = getPan();
-        if (ImGui::InputScalar("Pan", ImGuiDataType_U8, &pan, &cStepU8))
+        if (ImGui::InputScalar(sead::FormatFixedSafeString<32>("Pan (%.3f)###pan", (static_cast<f32>(pan) / 64.0f) - 1.0f).cstr(), ImGuiDataType_U8, &pan, &cStepU8))
         {
             setPan(pan);
         }
@@ -182,6 +182,9 @@ void BankFile::VelocityRegion::drawUI()
         {
             setIsIgnoreNoteOff(ignoreNoteOff);
         }
+
+        ImGui::SameLine();
+        HelpMarker("You can middle click the stop button on the Player window to kill all Voices if you need to");
     }
 
     {

@@ -117,7 +117,7 @@ public:
 
         void setPitch(f32 pitch)
         {
-            pitch = sead::Mathf::clampMin(pitch, 0.0f);
+            pitch = sead::Mathf::clamp2(0.0f, pitch, 400.0f);
             mPitch = pitch;
         }
 
