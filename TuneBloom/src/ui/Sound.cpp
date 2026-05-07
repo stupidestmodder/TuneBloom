@@ -3,6 +3,8 @@
 
 #include <imgui/imgui_custom.h>
 
+#include <bfsar/BfwsdFile.h>
+
 Sound::~Sound()
 {
     if (this == sSoundPlayer.getPlayingSound())
@@ -930,7 +932,7 @@ void DrawSoundPropertiesUI()
 
                 {
                     u8 pan = waveSoundInfo.getPan();
-                    if (ImGui::InputScalar("Pan", ImGuiDataType_U8, &pan, &cStepU8))
+                    if (ImGui::InputScalar(sead::FormatFixedSafeString<32>("Pan (%.3f)###pan", (static_cast<f32>(pan) / 64.0f) - 1.0f).cstr(), ImGuiDataType_U8, &pan, &cStepU8))
                     {
                         waveSoundInfo.setPan(pan);
                     }
@@ -1051,7 +1053,11 @@ void DrawSoundPropertiesUI()
             }
 
             {
-                bool enableFilter = waveSoundInfo.isEnableFilter();
+                bool filterVersionEnable = BfwsdFile::isFilterSupportedVersion(sBfsar.getVersionForBfwsd());
+                if (!filterVersionEnable)
+                    ImGui::BeginDisabled();
+
+                bool enableFilter = filterVersionEnable ? waveSoundInfo.isEnableFilter() : false;
                 if (ImGui::Checkbox("Enable Filter", &enableFilter))
                 {
                     waveSoundInfo.setEnableFilter(enableFilter);
@@ -1061,7 +1067,7 @@ void DrawSoundPropertiesUI()
                     ImGui::BeginDisabled();
 
                 {
-                    u8 lpfFreq = waveSoundInfo.getLpfFreq();
+                    u8 lpfFreq = filterVersionEnable ? waveSoundInfo.getLpfFreq() : 64;
                     if (ImGui::InputScalar("LPF Frequency", ImGuiDataType_U8, &lpfFreq, &cStepU8))
                     {
                         waveSoundInfo.setLpfFreq(lpfFreq);
@@ -1069,7 +1075,7 @@ void DrawSoundPropertiesUI()
                 }
 
                 {
-                    u8 biquadType = waveSoundInfo.getBiquadType();
+                    u8 biquadType = filterVersionEnable ? waveSoundInfo.getBiquadType() : 0;
                     if (ImGui::InputScalar("Biquad Type", ImGuiDataType_U8, &biquadType, &cStepU8)) // TODO: Combo ?
                     {
                         waveSoundInfo.setBiquadType(biquadType);
@@ -1077,7 +1083,7 @@ void DrawSoundPropertiesUI()
                 }
 
                 {
-                    u8 biquadValue = waveSoundInfo.getBiquadValue();
+                    u8 biquadValue = filterVersionEnable ? waveSoundInfo.getBiquadValue() : 0;
                     if (ImGui::InputScalar("Biquad Value", ImGuiDataType_U8, &biquadValue, &cStepU8))
                     {
                         waveSoundInfo.setBiquadValue(biquadValue);
@@ -1085,6 +1091,9 @@ void DrawSoundPropertiesUI()
                 }
 
                 if (!enableFilter)
+                    ImGui::EndDisabled();
+
+                if (!filterVersionEnable)
                     ImGui::EndDisabled();
             }
 
@@ -1136,7 +1145,7 @@ void Sound::StreamSoundInfo::Track::drawUI()
 
     {
         u8 pan = getPan();
-        if (ImGui::InputScalar("Pan", ImGuiDataType_U8, &pan, &cStepU8))
+        if (ImGui::InputScalar(sead::FormatFixedSafeString<32>("Pan (%.3f)###pan", (static_cast<f32>(pan) / 64.0f) - 1.0f).cstr(), ImGuiDataType_U8, &pan, &cStepU8))
         {
             setPan(pan);
         }
@@ -1166,7 +1175,7 @@ void Sound::StreamSoundInfo::Track::drawUI()
         }
 
         {
-            u8 mainSend = getMainSend();
+            u8 mainSend = enableSend ? getMainSend() : 127;
             if (ImGui::InputScalar("Main Send", ImGuiDataType_U8, &mainSend, &cStepU8))
             {
                 setMainSend(mainSend);
@@ -1175,7 +1184,7 @@ void Sound::StreamSoundInfo::Track::drawUI()
 
         for (u32 i = 0; i < 3; i++)
         {
-            u8 fxSend = getFxSend(i);
+            u8 fxSend = enableSend ? getFxSend(i) : 0;
             if (ImGui::InputScalar(sead::FormatFixedSafeString<16>("Fx Send %u", i).cstr(), ImGuiDataType_U8, &fxSend, &cStepU8))
             {
                 setFxSend(i, fxSend);
@@ -1196,7 +1205,7 @@ void Sound::StreamSoundInfo::Track::drawUI()
         }
 
         {
-            u8 lpfFreq = getLpfFreq();
+            u8 lpfFreq = enableFilter ? getLpfFreq() : 64;
             if (ImGui::InputScalar("LPF Frequency", ImGuiDataType_U8, &lpfFreq, &cStepU8))
             {
                 setLpfFreq(lpfFreq);
@@ -1204,7 +1213,7 @@ void Sound::StreamSoundInfo::Track::drawUI()
         }
 
         {
-            u8 biquadType = getBiquadType();
+            u8 biquadType = enableFilter ? getBiquadType() : 0;
             if (ImGui::InputScalar("Biquad Type", ImGuiDataType_U8, &biquadType, &cStepU8)) // TODO: Combo ?
             {
                 setBiquadType(biquadType);
@@ -1212,7 +1221,7 @@ void Sound::StreamSoundInfo::Track::drawUI()
         }
 
         {
-            u8 biquadValue = getBiquadValue();
+            u8 biquadValue = enableFilter ? getBiquadValue() : 0;
             if (ImGui::InputScalar("Biquad Value", ImGuiDataType_U8, &biquadValue, &cStepU8))
             {
                 setBiquadValue(biquadValue);
