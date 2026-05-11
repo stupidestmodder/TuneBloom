@@ -40,9 +40,7 @@ jobs:
       shell: pwsh
       run: |
         New-Item -ItemType Directory -Force -Path "${{ github.workspace }}/workdir"
-        Copy-Item -Path (Get-ChildItem -Recurse -Filter "*.exe" | `
-          Where-Object { $_.FullName -notlike "*\obj\*" } | `
-          Select-Object -First 1).FullName `
+        Copy-Item -Path "${{ github.workspace }}/TuneBloom/bin/TuneBloom-Win64-Release/TuneBloom.exe" `
           -Destination "${{ github.workspace }}/workdir/"
 
     - name: Zip workdir contents
