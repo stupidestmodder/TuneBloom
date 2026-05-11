@@ -134,6 +134,20 @@ static bool sWantsClose = false;
 static bool sWantsExit = false;
 static bool sWantsAbout = false;
 
+bool TryExit()
+{
+    if (sBfsar.isOpen())
+    {
+        sWantsExit = true;
+        return false;
+    }
+    else
+    {
+        Exit();
+        return true;
+    }
+}
+
 void DrawMenuBar()
 {
     if (ImGui::BeginMainMenuBar())
@@ -192,14 +206,7 @@ void DrawMenuBar()
 
             if (ImGui::MenuItem(ICON_LC_DOOR_OPEN " Exit"))
             {
-                if (bfsarOpen)
-                {
-                    sWantsExit = true;
-                }
-                else
-                {
-                    Exit();
-                }
+                TryExit();
             }
 
             ImGui::EndMenu();

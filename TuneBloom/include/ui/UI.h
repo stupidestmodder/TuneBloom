@@ -128,6 +128,8 @@ bool SaveFileAs();
 bool CloseFile();
 bool Exit();
 
+bool TryExit();
+
 bool CheckBlockCorrupt(const char* fileName, const char* blockName, const void* block);
 bool CheckBlockCorruptError(const char* fileName, const char* blockName, const void* block);
 

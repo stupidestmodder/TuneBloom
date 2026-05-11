@@ -101,22 +101,35 @@ static void HookRendererSwapBuffers(ImGuiViewport* viewport, void*)
 
 static LRESULT __stdcall MsgProc(HWND hWnd, u32 msg, WPARAM wParam, LPARAM lParam)
 {
-    if (msg == WM_DROPFILES)
-    {
-        HDROP drop = (HDROP)wParam;
-
-        UINT fileCount = DragQueryFileA(drop, 0xFFFFFFFF, NULL, 0);
-        if (fileCount > 0)
-        {
-            DragQueryFileA(drop, 0, sDroppedFilePath.getBuffer(), sDroppedFilePath.getBufferSize());
-        }
-        DragFinish(drop);
-
-        return 0;
-    }
-
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
         return 1;
+
+    switch (msg)
+    {
+        case WM_KEYDOWN:
+            if (wParam == VK_ESCAPE)
+            {
+                return 1;
+            }
+
+        case WM_CLOSE:
+            TryExit();
+            return 1;
+
+        case WM_DROPFILES:
+        {
+            HDROP drop = (HDROP)wParam;
+
+            UINT fileCount = DragQueryFileA(drop, 0xFFFFFFFF, NULL, 0);
+            if (fileCount > 0)
+            {
+                DragQueryFileA(drop, 0, sDroppedFilePath.getBuffer(), sDroppedFilePath.getBufferSize());
+            }
+            DragFinish(drop);
+
+            return 1;
+        }
+    }
 
     return 0;
 }
