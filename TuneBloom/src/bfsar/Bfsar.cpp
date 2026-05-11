@@ -2225,7 +2225,9 @@ bool Bfsar::open_(const nw::snd::MemorySoundArchive& soundArchive, sead::Heap* h
             {
                 //? Can't know OutputType... Fallback to Embed
                 group->mOutputType = Group::OutputType::Embed;
-                PopupMgr::instance()->pushCurrentItemError("Couldn't find Output Type (Group is empty)\n\nThis can be safely ignored.\n(Just keep in mind if you plan to use this Group)");
+
+                // dont
+                // PopupMgr::instance()->pushCurrentItemError("Couldn't find Output Type (Group is empty)\n\nThis can be safely ignored.\n(Just keep in mind if you plan to use this Group)");
             }
 
             auto addGroupItem = [&](u32 itemIdx, bool assertNotDisabled)
