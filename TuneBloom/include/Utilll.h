@@ -11,12 +11,14 @@ void setFramework_(sead::Framework* framework);
 sead::Texture* getIcon();
 void setIcon_(sead::Texture* icon);
 
-#if defined(COMMIT_SHA)
-inline const sead::SafeString cAppName("TuneBloom: commit " COMMIT_SHA);
-#else
 inline const sead::SafeString cAppName("TuneBloom");
+
+#if defined(COMMIT_SHA)
+inline const sead::SafeString cAppVersion(COMMIT_SHA);
+#else
+inline const sead::SafeString cAppVersion("1.01");
 #endif
 
-inline const sead::SafeString cAppVersion("1.0");
+bool updateTitle(const char* path);
 
 } // namespace util

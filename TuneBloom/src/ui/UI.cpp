@@ -288,14 +288,14 @@ void DrawTuneBloomSplash(ImTextureID logoTex, ImVec2 logoSize)
         // ImGui::Dummy(ImVec2(0.0f, 10.0f));
 
         ImGui::PushFont(io.Fonts->Fonts[0]); // Big font
-        CenterText("TuneBloom");
+        CenterText(util::cAppName.cstr());
         ImGui::PopFont();
 
         ImGui::SameLine();
 
 
 #if defined(COMMIT_SHA)
-        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.7f, 1.0f), " %s", COMMIT_SHA);
+        ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.7f, 1.0f), " %s", util::cAppVersion.cstr());
 #else
         ImGui::TextColored(ImVec4(0.6f, 0.6f, 0.7f, 1.0f), " v%s", util::cAppVersion.cstr());
 #endif

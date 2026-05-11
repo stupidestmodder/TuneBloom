@@ -40,6 +40,7 @@ int main()
     }
 
     util::setFramework_(framework);
+    util::updateTitle(nullptr);
 
     {
         sead::ExpHeap* heap = sead::ExpHeap::create(0, "GraphicSystem", sead::HeapMgr::getRootHeap(0));

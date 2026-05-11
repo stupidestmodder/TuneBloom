@@ -1,5 +1,6 @@
 #include <Utilll.h>
 
+#include <framework/win/seadGameFrameworkBaseWin.h>
 #include <gfx/seadTexture.h>
 
 static sead::Framework* sFramework = nullptr;
@@ -25,6 +26,26 @@ sead::Texture* getIcon()
 void setIcon_(sead::Texture* icon)
 {
     sIcon = icon;
+}
+
+bool updateTitle(const char* path)
+{
+    sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(getFramework());
+    if (!fw)
+    {
+        return false;
+    }
+
+    sead::FixedSafeString<512> title;
+    title.format("%s %s", cAppName.cstr(), cAppVersion.cstr());
+
+    if (path)
+    {
+        title.appendWithFormat(" - %s", path);
+    }
+
+    fw->setCaption(title);
+    return true;
 }
 
 } // namespace util

@@ -205,12 +205,7 @@ bool NewFile()
 
     sBfsar.create();
 
-    sead::FormatFixedSafeString<512> title("%s - %s", util::cAppName.cstr(), "*New.bfsar");
-
-    sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(util::getFramework());
-    SEAD_ASSERT(fw);
-
-    fw->setCaption(title);
+    util::updateTitle("*New.bfsar");
 
     return true;
 }
@@ -272,12 +267,7 @@ bool OpenFile()
     sead::FixedSafeString<512> fileName;
     sead::Path::getFileName(&fileName, filePath);
 
-    sead::FormatFixedSafeString<512> title("%s - %s", util::cAppName.cstr(), fileName.cstr());
-
-    sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(util::getFramework());
-    SEAD_ASSERT(fw);
-
-    fw->setCaption(title);
+    util::updateTitle(fileName.cstr());
 
     return true;
 }
@@ -318,12 +308,7 @@ bool SaveFileAs()
             sead::FixedSafeString<512> fileName;
             sead::Path::getFileName(&fileName, path);
 
-            sead::FormatFixedSafeString<512> title("%s - %s", util::cAppName.cstr(), fileName.cstr());
-
-            sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(util::getFramework());
-            SEAD_ASSERT(fw);
-
-            fw->setCaption(title);
+            util::updateTitle(fileName.cstr());
 
             return true;
         }
@@ -346,11 +331,7 @@ bool CloseFile()
 
     sBfsar.close();
 
-    sead::GameFrameworkBaseWin* fw = sead::DynamicCast<sead::GameFrameworkBaseWin>(util::getFramework());
-    if (fw)
-    {
-        fw->setCaption(util::cAppName);
-    }
+    util::updateTitle(nullptr);
 
     return true;
 }
